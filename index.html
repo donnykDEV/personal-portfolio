@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="utf-8">
+    <!-- Niente viewport-fit=cover, ma NON è quello che causava il bug
+         dell'isola dinamica trasparente: quello era l'overlay di rumore su
+         body::before, che era `position: fixed` (vedi "NOISE OVERLAY" in
+         style.css). `cover` è stato tolto durante la caccia e non è più
+         servito rimetterlo, visto che il menu a tutto schermo si copre da sé
+         portando <main> a opacity 0. Se un giorno serve, si può rimettere. -->
+    <meta content="width=device-width, initial-scale=1" name="viewport">
+    <title>Lorenzo Doneddu — Sviluppatore Web</title>
+    <meta content="Lorenzo Doneddu, sviluppatore web full stack. Siti WordPress &amp; WooCommerce, landing page, gestionali e dashboard su misura."
+          name="description">
+    <meta content="Lorenzo Doneddu" name="author">
+    <meta content="index, follow" name="robots">
+    <meta content="#0d0d0d" name="theme-color">
+    <!-- Vale solo da app standalone (sito aggiunto alla home), non in Safari.
+         `black`, non `black-translucent`: quest'ultimo fa passare il contenuto
+         sotto la status bar, e lassù il contenuto non deve mai arrivare. -->
+    <meta content="black" name="apple-mobile-web-app-status-bar-style">
+
+    <link rel="icon" type="image/x-icon" href="favicon.ico" sizes="256x256">
+    <link href="favicon.ico" rel="apple-touch-icon">
+
+
+
+    <link href="https://lorenzodoneddu.dev/" rel="canonical">
+
+    <!-- Anteprima nei social e nelle app di messaggistica -->
+    <meta content="website" property="og:type">
+    <meta content="https://lorenzodoneddu.dev/" property="og:url">
+    <meta content="it_IT" property="og:locale">
+    <meta content="Lorenzo Doneddu" property="og:site_name">
+    <meta content="Lorenzo Doneddu — Sviluppatore Web Full Stack" property="og:title">
+    <meta content="Siti WordPress &amp; WooCommerce, landing page, gestionali e dashboard su misura. Roma, IT."
+          property="og:description">
+    <meta content="https://lorenzodoneddu.dev/assets/images/og-image.webp" property="og:image">
+    <meta content="1200" property="og:image:width">
+    <meta content="630" property="og:image:height">
+    <meta content="Lorenzo Doneddu — Sviluppatore Web Full Stack" property="og:image:alt">
+
+    <meta content="summary_large_image" name="twitter:card">
+    <meta content="Lorenzo Doneddu — Sviluppatore Web Full Stack" name="twitter:title">
+    <meta content="Siti WordPress &amp; WooCommerce, landing page, gestionali e dashboard su misura. Roma, IT."
+          name="twitter:description">
+    <meta content="https://lorenzodoneddu.dev/assets/images/og-image.webp" name="twitter:image">
+    <meta content="Lorenzo Doneddu — Sviluppatore Web Full Stack" name="twitter:image:alt">
+
+    <link href="css/fonts.min.css" rel="stylesheet">
+    <link href="css/style.min.css?v=1.1.0" rel="stylesheet">
+
+    <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "Person",
+            "name": "Lorenzo Doneddu",
+            "url": "https://lorenzodoneddu.dev/",
+            "image": "https://lorenzodoneddu.dev/assets/images/og-image.webp",
+            "jobTitle": "Sviluppatore Web Full Stack",
+            "email": "mailto:lorenzodoneddudev@gmail.com",
+            "address": {
+                "@type": "PostalAddress",
+                "addressLocality": "Roma",
+                "addressCountry": "IT"
+            },
+            "sameAs": [
+                "https://www.linkedin.com/in/lorenzo-doneddu-4767a5242/"
+            ],
+            "knowsAbout": [
+                "WordPress",
+                "WooCommerce",
+                "Sviluppo web full stack",
+                "Applicazioni mobile cross-platform",
+                "Python",
+                "Machine learning"
+            ]
+        }
+    </script>
+</head>
+<body>
+
+<!-- ICONE SVG ─────────────────────────────────────────────────────────
+     Erano caratteri Unicode (↗ ✉ ◈ ✦ →). Nessuno di quei glifi esiste in
+     Syne o JetBrains Mono, quindi il browser ripiegava sempre su un font di
+     sistema: su iOS finiva su Apple Color Emoji e le frecce diventavano il
+     quadrato blu con la freccia bianca. Anche col selettore di presentazione
+     testuale il disegno restava a discrezione del sistema operativo, diverso
+     tra Windows e Apple.
+     Definite una volta come <symbol> e richiamate con <use>: tratto e forma
+     identici su ogni dispositivo. Usano currentColor, quindi le regole
+     `color` esistenti continuano a funzionare, e misurano 1em, quindi le
+     regole `font-size` esistenti continuano a dimensionarle. -->
+<svg aria-hidden="true" focusable="false" style="position:absolute;width:0;height:0;overflow:hidden">
+    <symbol id="i-arrow-ne" viewBox="0 0 24 24">
+        <path d="M6 18 18 6M18 6h-8M18 6v8" fill="none" stroke="currentColor" stroke-linecap="round"
+              stroke-linejoin="round" stroke-width="2"/>
+    </symbol>
+    <symbol id="i-arrow-e" viewBox="0 0 24 24">
+        <path d="M3 12h16M12 5l7 7-7 7" fill="none" stroke="currentColor" stroke-linecap="round"
+              stroke-linejoin="round" stroke-width="2"/>
+    </symbol>
+    <symbol id="i-mail" viewBox="0 0 24 24">
+        <rect fill="none" height="14" rx="1.5" stroke="currentColor" stroke-width="2" width="18" x="3" y="5"/>
+        <path d="m3.8 6.6 8.2 5.8 8.2-5.8" fill="none" stroke="currentColor" stroke-linecap="round"
+              stroke-linejoin="round" stroke-width="2"/>
+    </symbol>
+    <symbol id="i-diamond" viewBox="0 0 24 24">
+        <path d="M12 2 22 12 12 22 2 12z" fill="none" stroke="currentColor" stroke-width="2"/>
+        <path d="M12 7.6 16.4 12 12 16.4 7.6 12z" fill="currentColor"/>
+    </symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24">
+        <path d="M12 1.5 14.7 9.3 22.5 12 14.7 14.7 12 22.5 9.3 14.7 1.5 12 9.3 9.3z" fill="currentColor"/>
+    </symbol>
+</svg>
+
+<!-- INTRO LOADER (removed by script.js; skipped under prefers-reduced-motion) -->
+<div aria-hidden="true" id="loader">
+    <div class="loader-inner">
+        <img alt="" class="loader-logo" height="44" src="assets/images/logo-dk-horizontal.webp" width="44">
+        <div class="loader-bar"><span></span></div>
+        <div class="loader-text">LORENZO DONEDDU</div>
+    </div>
+</div>
+
+<!-- AMBIENT BACKGROUND -->
+<div aria-hidden="true" class="bg-fx">
+    <div class="bg-grid"></div>
+    <div class="bg-glow bg-glow--a"></div>
+    <div class="bg-glow bg-glow--b"></div>
+    <div class="bg-vignette"></div>
+</div>
+
+<!-- SCROLL PROGRESS -->
+<div aria-hidden="true" id="scroll-progress"><span></span></div>
+
+<!-- CUSTOM CURSOR (desktop only, see script.js) -->
+<div id="cursor-dot"></div>
+<div id="cursor-ring"></div>
+
+<!-- NAV -->
+<nav id="nav">
+    <div class="nav-logo"><img alt="DK logo" height="32" src="assets/images/logo-dk-horizontal.webp" width="32"></div>
+    <button aria-controls="nav-panel" aria-expanded="false" aria-label="Apri menu" class="nav-toggle" id="nav-toggle">
+        <span></span><span></span><span></span>
+    </button>
+
+    <!-- Su desktop è la barra di link inline; sotto i 1024px diventa
+         l'overlay a tutto schermo. Le voci restano un unico set di <a>,
+         così lo scroll spy continua a marcarle senza duplicati. -->
+    <div class="nav-panel" id="nav-panel">
+        <ul class="nav-links" id="nav-links">
+            <li><a data-index="01" href="#about"><span class="nav-link-mask"><span class="nav-link-in">About</span></span></a>
+            </li>
+            <li><a data-index="02" href="#skills"><span class="nav-link-mask"><span class="nav-link-in">Skills</span></span></a>
+            </li>
+            <li>
+                <a data-index="03" href="#esperienze"><span class="nav-link-mask"><span class="nav-link-in">Esperienze</span></span></a>
+            </li>
+            <li><a data-index="04" href="#servizi"><span class="nav-link-mask"><span class="nav-link-in">Servizi</span></span></a>
+            </li>
+            <li><a data-index="05" href="#contatti"><span class="nav-link-mask"><span class="nav-link-in">Contatti</span></span></a>
+            </li>
+        </ul>
+
+        <div class="nav-foot">
+            <div class="nav-foot-status">
+                <span class="hero-tag-dot"></span>
+                <span>Disponibile per nuovi progetti</span>
+            </div>
+            <div class="nav-foot-links">
+                <a class="nav-foot-link" href="mailto:lorenzodoneddudev@gmail.com">
+                    <span class="nav-foot-icon"><svg aria-hidden="true" class="icon" focusable="false"><use href="#i-mail"/></svg></span>
+                    <span class="nav-foot-text">lorenzodoneddudev@gmail.com</span>
+                    <span class="nav-foot-go"><svg aria-hidden="true" class="icon" focusable="false"><use href="#i-arrow-ne"/></svg></span>
+                </a>
+                <a class="nav-foot-link" href="https://www.linkedin.com/in/lorenzo-doneddu-4767a5242/" rel="noopener"
+                   target="_blank">
+                    <span class="nav-foot-icon"><svg aria-hidden="true" class="icon" focusable="false"><use href="#i-diamond"/></svg></span>
+                    <span class="nav-foot-text">LinkedIn</span>
+                    <span class="nav-foot-go"><svg aria-hidden="true" class="icon" focusable="false"><use href="#i-arrow-ne"/></svg></span>
+                </a>
+            </div>
+        </div>
+    </div>
+</nav>
+
+
+<main id="main" role="main">
+<!-- HERO -->
+<section id="hero">
+    <div aria-hidden="true" class="hero-frame">
+        <span></span><span></span><span></span><span></span>
+    </div>
+    <div class="hero-inner">
+        <div class="hero-copy">
+            <div class="hero-tag">
+                <span class="hero-tag-dot"></span>
+                Disponibile per nuovi progetti
+            </div>
+            <!-- aria-label keeps the accessible name intact: script.js splits the
+                 visible text into per-character spans, which screen readers would
+                 otherwise announce one letter at a time. -->
+            <h1 aria-label="Lorenzo Doneddu" class="hero-name">
+                <span class="mask-line"><span class="mask-line-in">Lorenzo</span></span>
+                <span class="mask-line"><span class="mask-line-in accent">Doneddu</span></span>
+            </h1>
+            <p class="hero-tagline"><span class="type-target">Sviluppatore web. Risolvo problemi che ancora non sai di avere.</span><span
+                    aria-hidden="true" class="type-cursor"></span></p>
+            <div class="hero-cta">
+                <a class="btn-primary magnetic" href="#contatti"><span>Iniziamo</span></a>
+                <a class="btn-ghost magnetic" href="#servizi"><span>Scopri i servizi</span> <i class="btn-arrow"><svg aria-hidden="true" class="icon" focusable="false"><use href="#i-arrow-e"/></svg></i></a>
+            </div>
+        </div>
+        <div class="hero-visual">
+            <div aria-hidden="true" class="hero-deco">
+                <span class="hero-orb"></span>
+                <span class="hero-ring hero-ring--1"></span>
+                <span class="hero-ring hero-ring--2"></span>
+                <span class="hero-crosshair"></span>
+            </div>
+            <img alt="Sissy, la mascotte" height="180" id="sissy-hero" src="assets/images/sissy-np.webp" width="180">
+        </div>
+    </div>
+    <div class="scroll-line"><span>scroll</span></div>
+    <div aria-hidden="true" class="hero-corner">
+        <span class="hc-line">ROMA, IT</span>
+        <span class="hc-line hc-time" id="local-time">--:--:--</span>
+    </div>
+</section>
+
+<!-- MARQUEE -->
+<div aria-hidden="true" class="marquee">
+    <div class="marquee-track" id="marquee-track">
+        <div class="marquee-set">
+            <span>WordPress</span><i><svg aria-hidden="true" class="icon" focusable="false"><use href="#i-spark"/></svg></i><span>WooCommerce</span><i><svg aria-hidden="true" class="icon" focusable="false"><use href="#i-spark"/></svg></i><span>PHP</span><i><svg aria-hidden="true" class="icon" focusable="false"><use href="#i-spark"/></svg></i><span>JavaScript</span><i><svg aria-hidden="true" class="icon" focusable="false"><use href="#i-spark"/></svg></i><span>SQL</span><i><svg aria-hidden="true" class="icon" focusable="false"><use href="#i-spark"/></svg></i><span>AJAX</span><i><svg aria-hidden="true" class="icon" focusable="false"><use href="#i-spark"/></svg></i><span>jQuery</span><i><svg aria-hidden="true" class="icon" focusable="false"><use href="#i-spark"/></svg></i><span>Python</span><i><svg aria-hidden="true" class="icon" focusable="false"><use href="#i-spark"/></svg></i><span>Docker</span><i><svg aria-hidden="true" class="icon" focusable="false"><use href="#i-spark"/></svg></i><span>Linux</span><i><svg aria-hidden="true" class="icon" focusable="false"><use href="#i-spark"/></svg></i><span>Angular</span><i><svg aria-hidden="true" class="icon" focusable="false"><use href="#i-spark"/></svg></i><span>Flutter</span><i><svg aria-hidden="true" class="icon" focusable="false"><use href="#i-spark"/></svg></i><span>Figma</span><i><svg aria-hidden="true" class="icon" focusable="false"><use href="#i-spark"/></svg></i>
+        </div>
+    </div>
+</div>
+
+<!-- ABOUT -->
+<section id="about">
+    <div class="section-label"><span class="sl-num">01</span><span class="sl-text">About</span></div>
+    <div class="about-grid">
+        <div class="about-left">
+            <h2 class="about-big">
+                <span class="mask-line"><span class="mask-line-in">Codice pulito.</span></span>
+                <span class="mask-line"><span class="mask-line-in accent">Idee sporche.</span></span>
+                <span class="mask-line"><span class="mask-line-in">Risultati netti.</span></span>
+            </h2>
+            <div class="about-stats">
+                <div class="stat">
+                    <div class="stat-num" data-count="22">22</div>
+                    <div class="stat-label">anni</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-num" data-count="2" data-suffix="+">2+</div>
+                    <div class="stat-label">anni exp</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-num" data-count="20" data-suffix="+">20+</div>
+                    <div class="stat-label">progetti</div>
+                </div>
+            </div>
+            <dl class="about-meta">
+                <div class="am-row">
+                    <dt>Base</dt>
+                    <dd>Roma, IT</dd>
+                </div>
+                <div class="am-row">
+                    <dt>Ruolo</dt>
+                    <dd>Sviluppatore Web</dd>
+                </div>
+                <div class="am-row">
+                    <dt>Focus</dt>
+                    <dd>WordPress &amp; Web App</dd>
+                </div>
+                <div class="am-row">
+                    <dt>Stato</dt>
+                    <dd class="am-live"><span class="am-dot"></span>Disponibile</dd>
+                </div>
+            </dl>
+        </div>
+        <div class="about-text">
+            <p>Sono Lorenzo Doneddu, sviluppatore web di Roma con più di due anni di esperienza sul campo. Sin dalle
+                elementari partecipavo a gare di logica — e da allora non ho mai smesso di stressare il cervello per
+                trovare soluzioni.</p>
+            <p>Ho scelto questo lavoro perché l'ho sempre considerato il lavoro del futuro. Oggi lo è davvero, e io sono
+                già qui.</p>
+            <p>Lavoro su WordPress, WooCommerce, PHP, JavaScript e molto altro — ma quello che mi entusiasma davvero non
+                è la tecnologia in sé: è il momento in cui un problema difficile diventa una soluzione elegante.</p>
+            <p>Quando non sono davanti al monitor, sono davanti a uno schermo — che sia FC26, una partita della Roma o
+                dei Sixers, poco cambia. Lo schermo vince sempre.</p>
+        </div>
+    </div>
+</section>
+
+<!-- SKILLS -->
+<section id="skills">
+    <div class="section-label"><span class="sl-num">02</span><span class="sl-text">Skills</span></div>
+
+    <div class="skills-tier">
+        <div class="tier-label"><span class="tl-text">Uso quotidiano</span><span class="tier-count">08</span></div>
+        <div class="tier1-groups">
+            <div class="tier1-group">
+                <div class="tier1-group-label">Frontend</div>
+                <div class="tier-grid tier-grid--1">
+                    <div class="skill-card skill-card--1 spot">
+                        <span class="skill-ord">01</span>
+                        <div class="skill-name">HTML &amp; CSS</div>
+                        <div class="skill-desc">Markup semantico, layout responsive, animazioni</div>
+                    </div>
+                    <div class="skill-card skill-card--1 spot">
+                        <span class="skill-ord">02</span>
+                        <div class="skill-name">JavaScript</div>
+                        <div class="skill-desc">ES6+, DOM, fetch, logica applicativa</div>
+                    </div>
+                    <div class="skill-card skill-card--1 spot">
+                        <span class="skill-ord">03</span>
+                        <div class="skill-name">Bootstrap</div>
+                        <div class="skill-desc">Layout rapidi, componenti responsive</div>
+                    </div>
+                    <div class="skill-card skill-card--1 spot">
+                        <span class="skill-ord">04</span>
+                        <div class="skill-name">jQuery</div>
+                        <div class="skill-desc">Manipolazione DOM, interazioni</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tier1-group">
+                <div class="tier1-group-label">Backend</div>
+                <div class="tier-grid tier-grid--pair">
+                    <div class="skill-card skill-card--1 spot">
+                        <span class="skill-ord">05</span>
+                        <div class="skill-name">PHP</div>
+                        <div class="skill-desc">Backend, logica server-side, integrazioni</div>
+                    </div>
+                    <div class="skill-card skill-card--1 spot">
+                        <span class="skill-ord">06</span>
+                        <div class="skill-name">SQL</div>
+                        <div class="skill-desc">Query, schema, ottimizzazione database</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tier1-group">
+                <div class="tier1-group-label">CMS &amp; E-commerce</div>
+                <div class="tier-grid tier-grid--main-side">
+                    <div class="skill-card skill-card--1 spot">
+                        <span class="skill-ord">07</span>
+                        <div class="skill-name">WordPress &amp; WooCommerce</div>
+                        <div class="skill-badges">
+                            <span class="skill-badge">temi custom</span>
+                            <span class="skill-badge">plugin custom</span>
+                            <span class="skill-badge">WooCommerce</span>
+                            <span class="skill-badge">shortcode PHP</span>
+                        </div>
+                    </div>
+                    <div class="skill-card skill-card--1 spot">
+                        <span class="skill-ord">08</span>
+                        <div class="skill-name">AJAX</div>
+                        <div class="skill-desc">Chiamate asincrone, integrazione API, dinamicità senza reload</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="skills-tier">
+        <div class="tier-label"><span class="tl-text">Progetti reali</span><span class="tier-count">03</span></div>
+        <div class="tier-grid tier-grid--2">
+            <div class="skill-card skill-card--2 spot">
+                <div class="skill-name">Python</div>
+                <div class="skill-desc">Scripting, automazione, backend</div>
+            </div>
+            <div class="skill-card skill-card--2 spot">
+                <div class="skill-name">Linux &amp; CLI</div>
+                <div class="skill-desc">Amministrazione, shell scripting, deploy</div>
+            </div>
+            <div class="skill-card skill-card--2 spot">
+                <div class="skill-name">Docker</div>
+                <div class="skill-desc">Containerizzazione, ambienti riproducibili</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="skills-tier">
+        <div class="tier-label"><span class="tl-text">Esperienza su progetto</span><span class="tier-count">03</span>
+        </div>
+        <div class="tier-tags">
+            <span class="skill-tag" data-tooltip="Usato su progetto specifico" tabindex="0"><span
+                    class="tag-prefix">~</span> Angular / TypeScript</span>
+            <span class="skill-tag" data-tooltip="Usato su progetto specifico" tabindex="0"><span
+                    class="tag-prefix">~</span> Flutter / Dart</span>
+            <span class="skill-tag" data-tooltip="Usato su progetto specifico" tabindex="0"><span
+                    class="tag-prefix">~</span> Figma</span>
+        </div>
+    </div>
+</section>
+
+<!-- ESPERIENZE -->
+<section id="esperienze">
+    <div class="section-label"><span class="sl-num">03</span><span class="sl-text">Esperienze</span></div>
+    <!-- Chronological order: the scroll-driven stack on mobile reads as a
+         progression, so it runs oldest to newest and lands on the current role. -->
+    <div class="timeline">
+        <span aria-hidden="true" class="timeline-track"><span class="timeline-fill"></span></span>
+        <div class="exp-stage">
+            <div class="exp-item">
+                <span aria-hidden="true" class="exp-dot"></span>
+                <span aria-hidden="true" class="exp-ghost">01</span>
+                <div class="exp-date">
+                    <span>MAG 2023 — AGO 2024</span>
+                    <span class="exp-duration" data-end="2024-08" data-start="2023-05"></span>
+                </div>
+                <div class="exp-role">Sviluppatore Full Stack</div>
+                <div class="exp-company">MVC Technology · Roma</div>
+                <div class="exp-desc">
+                    <p class="exp-lead">Il laboratorio.</p>
+                    <p>Da MVC ho sperimentato tutto — web, mobile, backend, computer vision. Lavoravo spesso
+                        in autonomia su progetti molto diversi tra loro, il che mi ha costretto a imparare
+                        velocemente e ad arrangiarmi su qualsiasi problema.</p>
+                    <p>Ho toccato tecnologie che vanno ben oltre il web classico: dal riconoscimento immagini con
+                        Python e modelli di machine learning, allo sviluppo di applicazioni mobile cross-platform,
+                        fino ad Angular e Flask. Ogni progetto era un territorio nuovo da esplorare.</p>
+                </div>
+                <div class="skill-badges">
+                    <span class="skill-badge">Python</span>
+                    <span class="skill-badge">OpenCV</span>
+                    <span class="skill-badge">YOLOv8</span>
+                    <span class="skill-badge">Flutter</span>
+                    <span class="skill-badge">Angular</span>
+                    <span class="skill-badge">TypeScript</span>
+                    <span class="skill-badge">Flask</span>
+                    <span class="skill-badge">WordPress</span>
+                    <span class="skill-badge">Bootstrap</span>
+                    <span class="skill-badge">Raspberry Pi</span>
+                </div>
+            </div>
+            <div class="exp-item">
+                <span aria-hidden="true" class="exp-dot"></span>
+                <span aria-hidden="true" class="exp-ghost">02</span>
+                <div class="exp-date">
+                    <span class="exp-date-live">NOV 2024 — ATTUALE</span>
+                    <span class="exp-duration" data-start="2024-11"></span>
+                </div>
+                <div class="exp-role">Sviluppatore Web</div>
+                <div class="exp-company">ITALA Tecnologie Informatiche · Roma</div>
+                <div class="exp-desc">
+                    <p class="exp-lead">Il salto professionale.</p>
+                    <p>Da ITALA ho imparato cosa significa lavorare in un contesto strutturato:
+                        team, clienti reali, processi, responsabilità. Gestisco e sviluppo siti per un portfolio
+                        clienti eterogeneo — editori, ristoranti, gioiellerie, parcheggi, studi professionali —
+                        adattando ogni soluzione al contesto specifico.</p>
+                    <p>Ho integrato pagamenti online con PayPal Advanced Checkout in PHP e JavaScript, gestisco la
+                        manutenzione continuativa su oltre 50 siti attivi e sviluppo nuove feature su gestionali
+                        esistenti. Lavoro quotidianamente con WordPress, PHP, HTML, CSS, JavaScript, jQuery, SQL e
+                        AJAX, collaborando con team di grafica e project management.</p>
+                </div>
+                <div class="skill-badges">
+                    <span class="skill-badge">WordPress</span>
+                    <span class="skill-badge">PHP</span>
+                    <span class="skill-badge">JavaScript</span>
+                    <span class="skill-badge">jQuery</span>
+                    <span class="skill-badge">SQL</span>
+                    <span class="skill-badge">AJAX</span>
+                    <span class="skill-badge">PayPal API</span>
+                    <span class="skill-badge">HTML/CSS</span>
+                </div>
+            </div>
+        </div>
+        <div aria-hidden="true" class="timeline-end"><span class="te-dot"></span></div>
+    </div>
+</section>
+
+<!-- SERVIZI -->
+<section id="servizi">
+    <div class="section-label"><span class="sl-num">04</span><span class="sl-text">Servizi</span></div>
+    <div class="servizi-grid">
+        <div class="servizio-card spot">
+            <span aria-hidden="true" class="servizio-ghost">01</span>
+            <div class="servizio-head">
+                <div class="servizio-num">01</div>
+                <div class="servizio-title">Siti WordPress &amp; WooCommerce</div>
+            </div>
+            <div class="servizio-body">
+                <div class="servizio-body-in">
+                    <div class="servizio-desc">Siti vetrina ed e-commerce su WordPress, temi e plugin su misura,
+                        integrazioni WooCommerce per vendere online senza compromessi.
+                    </div>
+                    <div class="servizio-arrow"><svg aria-hidden="true" class="icon" focusable="false"><use href="#i-arrow-ne"/></svg></div>
+                </div>
+            </div>
+        </div>
+        <div class="servizio-card spot">
+            <span aria-hidden="true" class="servizio-ghost">02</span>
+            <div class="servizio-head">
+                <div class="servizio-num">02</div>
+                <div class="servizio-title">Landing Page HTML-CSS-JS-PHP</div>
+            </div>
+            <div class="servizio-body">
+                <div class="servizio-body-in">
+                    <div class="servizio-desc">Pagine veloci e su misura, costruite con codice pulito — niente page
+                        builder, solo HTML, CSS, JS e PHP allo stato puro.
+                    </div>
+                    <div class="servizio-arrow"><svg aria-hidden="true" class="icon" focusable="false"><use href="#i-arrow-ne"/></svg></div>
+                </div>
+            </div>
+        </div>
+        <div class="servizio-card spot">
+            <span aria-hidden="true" class="servizio-ghost">03</span>
+            <div class="servizio-head">
+                <div class="servizio-num">03</div>
+                <div class="servizio-title">Manutenzione &amp; Ottimizzazione</div>
+            </div>
+            <div class="servizio-body">
+                <div class="servizio-body-in">
+                    <div class="servizio-desc">Aggiornamenti, correzioni, ottimizzazione delle performance e della
+                        sicurezza per siti e applicazioni già online.
+                    </div>
+                    <div class="servizio-arrow"><svg aria-hidden="true" class="icon" focusable="false"><use href="#i-arrow-ne"/></svg></div>
+                </div>
+            </div>
+        </div>
+        <div class="servizio-card spot">
+            <span aria-hidden="true" class="servizio-ghost">04</span>
+            <div class="servizio-head">
+                <div class="servizio-num">04</div>
+                <div class="servizio-title">Gestionali Web &amp; Dashboard</div>
+            </div>
+            <div class="servizio-body">
+                <div class="servizio-body-in">
+                    <div class="servizio-desc">Pannelli di controllo e gestionali su misura per digitalizzare processi
+                        interni e semplificare il lavoro quotidiano.
+                    </div>
+                    <div class="servizio-arrow"><svg aria-hidden="true" class="icon" focusable="false"><use href="#i-arrow-ne"/></svg></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CONTATTI -->
+<section id="contatti">
+    <div class="section-label"><span class="sl-num">05</span><span class="sl-text">Contatti</span></div>
+    <div class="contact-big">
+        <span class="mask-line"><span class="mask-line-in">Costruiamo</span></span>
+        <span class="mask-line"><span class="mask-line-in accent">qualcosa.</span></span>
+    </div>
+    <div class="contact-row">
+        <div class="contact-aside">
+            <div class="contact-status">
+                <span class="hero-tag-dot"></span>
+                <div>
+                    <div class="cs-title">Disponibile per nuovi progetti</div>
+                    <div class="cs-sub">Roma, IT</div>
+                </div>
+            </div>
+            <div class="contact-links">
+                <a class="contact-link" href="mailto:lorenzodoneddudev@gmail.com">
+                    <span class="contact-link-icon"><svg aria-hidden="true" class="icon" focusable="false"><use href="#i-mail"/></svg></span>
+                    <span class="contact-link-text">lorenzodoneddudev@gmail.com</span>
+                    <span class="contact-link-go"><svg aria-hidden="true" class="icon" focusable="false"><use href="#i-arrow-ne"/></svg></span>
+                </a>
+                <a class="contact-link" href="https://www.linkedin.com/in/lorenzo-doneddu-4767a5242/" rel="noopener"
+                   target="_blank">
+                    <span class="contact-link-icon"><svg aria-hidden="true" class="icon" focusable="false"><use href="#i-diamond"/></svg></span>
+                    <span class="contact-link-text">linkedin.com/in/lorenzo-doneddu</span>
+                    <span class="contact-link-go"><svg aria-hidden="true" class="icon" focusable="false"><use href="#i-arrow-ne"/></svg></span>
+                </a>
+            </div>
+        </div>
+        <form class="contact-form" id="contact-form">
+            <div class="field">
+                <input autocomplete="name" class="form-input" id="f-nome" maxlength="80" minlength="2" name="nome"
+                       placeholder=" " required type="text"/>
+                <label for="f-nome">Nome/Ragione Sociale</label>
+            </div>
+            <div class="field">
+                <input autocomplete="email" class="form-input" id="f-email" maxlength="160" name="email"
+                       placeholder=" " required type="email"/>
+                <label for="f-email">Email</label>
+            </div>
+            <div class="field">
+                <textarea class="form-input" id="f-msg" maxlength="4000" minlength="10" name="messaggio"
+                          placeholder=" " required></textarea>
+                <label for="f-msg">Messaggio</label>
+            </div>
+            <!-- Honeypot anti-spam: invisibile e fuori dal tab order, solo i bot lo compilano -->
+            <div aria-hidden="true" class="hp-field">
+                <label for="f-website">Non compilare</label>
+                <input autocomplete="off" id="f-website" name="website" tabindex="-1" type="text"/>
+            </div>
+            <button class="form-submit magnetic" type="submit"><span>Invia messaggio</span> <i
+                    class="btn-arrow"><svg aria-hidden="true" class="icon" focusable="false"><use href="#i-arrow-e"/></svg></i></button>
+        </form>
+    </div>
+</section>
+</main>
+<!-- FOOTER -->
+<footer>
+    <div aria-hidden="true" class="footer-wordmark">DONEDDU</div>
+    <div class="footer-inner">
+        <p>© 2026 Lorenzo Doneddu — Tutti i diritti riservati</p>
+        <p>Made with obsession, not templates.</p>
+    </div>
+</footer>
+
+<!-- Toast di esito invio form -->
+<div aria-live="polite" class="toast" id="toast" role="status">
+    <span aria-hidden="true" class="toast-icon"></span>
+    <div class="toast-body">
+        <p class="toast-title"></p>
+        <p class="toast-msg"></p>
+    </div>
+    <button aria-label="Chiudi notifica" class="toast-close" type="button">×</button>
+    <span aria-hidden="true" class="toast-bar"></span>
+</div>
+
+<img alt="Sissy" height="60" id="sissy-fixed" src="assets/images/sissy-np.webp"
+     style="background: transparent; background-color: transparent; border: none; padding: 0; border-radius: 0;">
+
+<script>
+    // Synchronous, pre-GSAP check: if the page loads already scrolled past the
+    // hero, jump straight to "state 2" (mini Sissy fixed, big Sissy hidden) so
+    // the two never render overlapped while GSAP/ScrollTrigger spin up.
+    (function () {
+        var heroEl = document.getElementById('sissy-hero');
+        var fixedEl = document.getElementById('sissy-fixed');
+        if (!heroEl || !fixedEl) return;
+
+        var scrollY = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || 0;
+
+        if (scrollY > window.innerHeight * 0.5) {
+            heroEl.classList.add('sissy-preload-hero-hidden');
+            fixedEl.classList.add('sissy-preload-fixed-visible');
+
+            // ScrollTrigger fires its onEnter callback immediately on init when the
+            // page is already scrolled past its start point, replaying the fly-away
+            // timeline invisibly underneath this lock. Release the lock once that
+            // has had time to finish, handing control back to script.js for any
+            // scrolling the user does from here on.
+            setTimeout(function () {
+                heroEl.classList.remove('sissy-preload-hero-hidden');
+                fixedEl.classList.remove('sissy-preload-fixed-visible');
+            }, 1500);
+        }
+    })();
+</script>
+
+<script src="js/gsap.min.js"></script>
+<script src="js/ScrollTrigger.min.js"></script>
+<script src="js/script.min.js?v=1.0.9"></script>
+</body>
+</html>

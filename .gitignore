@@ -1,0 +1,20 @@
+# Segreti
+.env
+.env.*
+
+# Node modules
+node_modules/
+
+# Vercel
+.vercel/
+
+# Editor / OS
+.idea/
+.DS_Store
+Thumbs.db
+
+# Claude
+.claude/
+
+# Server MCP
+.mcp.json

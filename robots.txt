@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+
+# L'endpoint del form non ha nulla da indicizzare
+Disallow: /api/
+
+Sitemap: https://lorenzodoneddu.dev/sitemap.xml
