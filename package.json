@@ -1,4 +1,14 @@
 {
+  "name": "personal-portfolio",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Portfolio personale di Lorenzo Doneddu — sviluppatore web full stack. HTML/CSS/JS vanilla, GSAP e Vercel Serverless Functions.",
+  "homepage": "https://lorenzodoneddu.dev/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/donnykDEV/personal-portfolio.git"
+  },
+  "author": "Lorenzo Doneddu",
   "devDependencies": {
     "terser": "^5.50.0"
   },
