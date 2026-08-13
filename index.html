@@ -48,7 +48,7 @@
     <meta content="Lorenzo Doneddu — Sviluppatore Web Full Stack" name="twitter:image:alt">
 
     <link href="css/fonts.min.css" rel="stylesheet">
-    <link href="css/style.min.css?v=1.1.0" rel="stylesheet">
+    <link href="css/style.min.css?v=1.2.0" rel="stylesheet">
 
     <script type="application/ld+json">
         {
@@ -595,6 +595,19 @@
                 <label for="f-website">Non compilare</label>
                 <input autocomplete="off" id="f-website" name="website" tabindex="-1" type="text"/>
             </div>
+            <!-- Consenso privacy. La casella nativa resta nel DOM (solo
+                 trasparente, sopra il quadrato disegnato in CSS) così il
+                 required entra nella validazione del browser e la spunta
+                 resta raggiungibile da tastiera. Il link apre in una scheda
+                 nuova per non far perdere quanto già scritto nel form. -->
+            <label class="field-consent" for="f-privacy">
+                <input id="f-privacy" name="privacy" required type="checkbox" value="yes"/>
+                <span aria-hidden="true" class="consent-box"></span>
+                <span class="consent-text">Ho letto la <a href="privacy-policy.html" rel="noopener"
+                                                          target="_blank">Privacy Policy</a> e acconsento al
+                    trattamento dei miei dati personali per ricevere una risposta a questa richiesta.
+                    <span aria-hidden="true" class="consent-req">*</span></span>
+            </label>
             <button class="form-submit magnetic" type="submit"><span>Invia messaggio</span> <i
                     class="btn-arrow"><svg aria-hidden="true" class="icon" focusable="false"><use href="#i-arrow-e"/></svg></i></button>
         </form>
@@ -606,6 +619,11 @@
     <div aria-hidden="true" class="footer-wordmark">DONEDDU</div>
     <div class="footer-inner">
         <p>© 2026 Lorenzo Doneddu — Tutti i diritti riservati</p>
+        <nav aria-label="Note legali" class="footer-legal">
+            <a href="privacy-policy.html">Privacy Policy</a>
+            <span aria-hidden="true">·</span>
+            <a href="cookie-policy.html">Cookie Policy</a>
+        </nav>
         <p>Made with obsession, not templates.</p>
     </div>
 </footer>
@@ -654,6 +672,6 @@
 
 <script src="js/gsap.min.js"></script>
 <script src="js/ScrollTrigger.min.js"></script>
-<script src="js/script.min.js?v=1.0.9"></script>
+<script src="js/script.min.js?v=1.1.0"></script>
 </body>
 </html>

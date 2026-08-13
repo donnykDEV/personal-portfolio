@@ -1177,6 +1177,7 @@ function initContactForm() {
     const btn = form.querySelector('.form-submit');
     const btnLabel = btn ? btn.querySelector('span') : null;
     const idleLabel = btnLabel ? btnLabel.textContent : '';
+    const consent = form.elements.privacy || null;
     let sending = false;
 
     const setLoading = (on) => {
@@ -1188,11 +1189,24 @@ function initContactForm() {
 
     const clearInvalid = () => {
         form.querySelectorAll('.form-input').forEach((el) => el.removeAttribute('aria-invalid'));
+        if (consent) consent.removeAttribute('aria-invalid');
     };
 
     form.querySelectorAll('.form-input').forEach((el) => {
         el.addEventListener('input', () => el.removeAttribute('aria-invalid'));
     });
+
+    if (consent) {
+        consent.addEventListener('change', () => consent.removeAttribute('aria-invalid'));
+    }
+
+    // Quando è il browser a bloccare l'invio col suo fumetto nativo, l'evento
+    // submit non arriva mai e il ramo qui sotto resta inattivo: `invalid` è
+    // l'unico aggancio per accendere comunque il bordo rosso sul campo che ha
+    // fermato l'invio. Non fa bolle, quindi va ascoltato in fase di cattura.
+    form.addEventListener('invalid', (e) => {
+        if (e.target instanceof Element) e.target.setAttribute('aria-invalid', 'true');
+    }, true);
 
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -1200,10 +1214,25 @@ function initContactForm() {
 
         clearInvalid();
         if (!form.checkValidity()) {
+            // La spunta del consenso non ha la classe .form-input, quindi non
+            // rientra in questa query: va marcata a parte.
             const invalid = form.querySelectorAll('.form-input:invalid');
             invalid.forEach((el) => el.setAttribute('aria-invalid', 'true'));
-            if (invalid[0]) invalid[0].focus();
-            toast.show('error', 'Campi da rivedere', 'Compila nome, email e messaggio prima di inviare.');
+
+            const consentMissing = !!consent && !consent.checked;
+            if (consentMissing) consent.setAttribute('aria-invalid', 'true');
+
+            const first = invalid[0] || (consentMissing ? consent : null);
+            if (first) first.focus();
+
+            // Con i campi già pieni, "compila nome, email e messaggio" non
+            // spiegherebbe perché il modulo non parte: il consenso mancante
+            // si merita un messaggio suo.
+            if (consentMissing && !invalid.length) {
+                toast.show('error', 'Consenso mancante', 'Per inviare il messaggio devi accettare la Privacy Policy.');
+            } else {
+                toast.show('error', 'Campi da rivedere', 'Compila nome, email e messaggio, e accetta la Privacy Policy.');
+            }
             return;
         }
 
@@ -1211,6 +1240,7 @@ function initContactForm() {
             nome: form.elements.nome.value.trim(),
             email: form.elements.email.value.trim(),
             messaggio: form.elements.messaggio.value.trim(),
+            privacy: !!(consent && consent.checked),
             website: form.elements.website ? form.elements.website.value : '',
         };
 

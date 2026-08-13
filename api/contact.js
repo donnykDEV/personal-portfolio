@@ -51,6 +51,13 @@ function clean(value) {
     return typeof value === 'string' ? value.trim() : '';
 }
 
+// La spunta arriva come booleano dal fetch di script.js, ma un invio senza
+// JavaScript (o da un client diverso) la manderebbe come stringa: si accettano
+// entrambe le forme, e nient'altro.
+function consentGiven(value) {
+    return value === true || value === 'yes' || value === 'on' || value === 'true';
+}
+
 function validate(data) {
     const errors = [];
     for (const [field, [min, max]] of Object.entries(LIMITS)) {
@@ -95,6 +102,16 @@ module.exports = async function handler(req, res) {
         return res.status(200).json({ok: true});
     }
 
+    // Consenso privacy. Il required sulla checkbox si aggira con due righe di
+    // console, quindi la base giuridica va verificata anche qui: senza spunta
+    // il messaggio non viene inoltrato.
+    if (!consentGiven(body.privacy)) {
+        return res.status(400).json({
+            ok: false,
+            error: 'Per inviare il messaggio devi accettare la Privacy Policy.',
+        });
+    }
+
     const data = {
         nome: clean(body.nome),
         email: clean(body.email),
@@ -114,10 +131,20 @@ module.exports = async function handler(req, res) {
         return res.status(429).json({ok: false, error: 'Troppi invii ravvicinati. Riprova tra un minuto.'});
     }
 
+    // Prova del consenso (art. 7.1 GDPR): la mail è l'unico posto dove il
+    // messaggio viene archiviato, quindi la traccia va scritta lì dentro.
+    const consentStamp = new Date().toLocaleString('it-IT', {
+        timeZone: 'Europe/Rome',
+        dateStyle: 'short',
+        timeStyle: 'medium',
+    });
+
     const text =
         `Nome: ${data.nome}\n` +
         `Email: ${data.email}\n\n` +
-        `${data.messaggio}\n`;
+        `${data.messaggio}\n\n` +
+        `---\n` +
+        `Privacy Policy accettata il ${consentStamp} (ora italiana).\n`;
 
     const html =
         `<div style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px;line-height:1.6">` +
@@ -125,6 +152,8 @@ module.exports = async function handler(req, res) {
         `<strong>Email:</strong> <a href="mailto:${escapeHtml(data.email)}">${escapeHtml(data.email)}</a></p>` +
         `<hr style="border:none;border-top:1px solid #ddd">` +
         `<p style="white-space:pre-wrap">${escapeHtml(data.messaggio)}</p>` +
+        `<hr style="border:none;border-top:1px solid #ddd">` +
+        `<p style="font-size:12px;color:#666">Privacy Policy accettata il ${escapeHtml(consentStamp)} (ora italiana).</p>` +
         `</div>`;
 
     try {
