@@ -1273,11 +1273,6 @@ footer p {
         padding-left: 40px;
     }
 
-    .exp-dot,
-    .te-dot {
-        left: -44px;
-    }
-
     footer {
         padding: 32px 60px;
     }
@@ -2387,7 +2382,7 @@ nav.is-scrolled::before {
 
 .exp-dot {
     position: absolute;
-    left: -32px;
+    left: -32.5px;
     top: 6px;
     width: 9px;
     height: 9px;
@@ -2823,6 +2818,14 @@ nav.is-scrolled::before {
 
     .about-meta {
         max-width: 420px;
+    }
+
+    /* Wider left gutter on desktop: moved here (rather than the earlier
+       1024px block) so it lands after the unconditional .exp-dot/.te-dot
+       base rules further down and actually wins the cascade. */
+    .exp-dot,
+    .te-dot {
+        left: -44.5px;
     }
 }
 
