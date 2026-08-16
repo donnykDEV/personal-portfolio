@@ -42,6 +42,15 @@ accessibilità, performance e attenzione a cosa succede davvero nel browser (non
 - **`prefers-reduced-motion`** rispettato ovunque le animazioni non siano essenziali
 - **SEO/social**: JSON-LD (schema.org Person), Open Graph, Twitter Card, sitemap,
   robots.txt
+- **URL senza estensione**: `cleanUrls` + `trailingSlash` in
+  [`vercel.json`](vercel.json) servono `/privacy-policy/` e redirigono in 308
+  permanente sia i vecchi `.html` sia la variante senza slash, così i link già
+  indicizzati non si rompono e ogni pagina ha una sola forma canonica. Tutti i
+  percorsi degli asset sono assoluti dalla root: con lo slash finale la base degli
+  URL relativi cambia, e un `css/style.css` si romperebbe
+- **CSS per pagina**: il foglio unico è diviso in `base` (condiviso) + `home` +
+  `legal`; le pagine legali scendono da ~56 KB a ~14 KB di CSS, e `base.min.css`
+  resta in cache passando dalla home alle policy
 - **Privacy & Cookie Policy** proprie, checkbox di consenso collegata alla validazione
   nativa del form
 
@@ -49,13 +58,16 @@ accessibilità, performance e attenzione a cosa succede davvero nel browser (non
 
 ```
 ├── index.html              # pagina principale (hero, about, skills, esperienze, servizi, contatti)
-├── privacy-policy.html
-├── cookie-policy.html
+├── privacy-policy.html     # servita come /privacy-policy/
+├── cookie-policy.html      # servita come /cookie-policy/
+├── vercel.json             # cleanUrls + trailingSlash
 ├── api/
 │   └── contact.js          # serverless function: form contatti → Resend
 ├── css/
-│   ├── style.css           # sorgente
-│   └── style.min.css       # servito in produzione
+│   ├── base.css            # condiviso: reset, token, sfondo, footer
+│   ├── home.css            # solo index.html
+│   ├── legal.css           # solo pagine legali
+│   └── *.min.css           # serviti in produzione
 ├── js/
 │   ├── script.js           # sorgente
 │   ├── script.min.js       # servito in produzione

@@ -18,3 +18,5 @@ Thumbs.db
 
 # Server MCP
 .mcp.json
+.vercel
+.env*
