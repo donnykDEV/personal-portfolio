@@ -20,3 +20,8 @@ Thumbs.db
 .mcp.json
 .vercel
 .env*
+
+# Skill files
+.impeccable/
+.agents/
+skills-lock.json
