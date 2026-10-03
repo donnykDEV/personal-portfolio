@@ -25,3 +25,6 @@ Thumbs.db
 .impeccable/
 .agents/
 skills-lock.json
+
+# Test
+test/

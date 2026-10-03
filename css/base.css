@@ -62,7 +62,8 @@ body {
     /* `hidden` on one axis forces the other from `visible` to `auto`, which
        turns <body> into a scroll container. ScrollTrigger pins with
        position: fixed, and a scrollable <body> breaks that on Safari/iOS —
-       the Esperienze stage animated but sat in the wrong place. `clip` gives
+       the old pinned Esperienze stage animated but sat in the wrong place
+       (that pin is gone; the rule stays for any future one). `clip` gives
        the same "no sideways scrolling" result without creating a scroll
        container, so overflow-y stays visible. `hidden` is kept first as the
        fallback for engines without `clip`. */

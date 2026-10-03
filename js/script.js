@@ -335,8 +335,8 @@ function initDurations() {
 }
 
 /* ---------------------------------------------------------------
-   MOBILE LAYOUT — rails, accordion and collapsible copy.
-   All three only exist under 640px and are torn down again above it,
+   MOBILE LAYOUT — rails and accordion.
+   Both only exist under 640px and are torn down again above it,
    so resizing or rotating never leaves the desktop layout in a
    half-mobile state.
    --------------------------------------------------------------- */
@@ -345,7 +345,7 @@ function initMobileLayout() {
     const teardowns = [];
 
     const enable = () => {
-        teardowns.push(enableSkillRails(), enableServiziAccordion(), enableExpStack());
+        teardowns.push(enableSkillRails(), enableServiziAccordion());
     };
 
     const disable = () => {
@@ -407,10 +407,10 @@ function setServizioOpen(card, open) {
     card.classList.toggle('is-open', open);
     card.setAttribute('aria-expanded', String(open));
     // No ScrollTrigger.refresh() here on purpose. The accordion reads live
-    // rects, so it needs no cached positions of its own, and refreshing mid
-    // scroll re-measured the pinned Esperienze stage while it was reverted,
-    // corrupting both that pin and this section's own trigger. The only cost
-    // is that the Contatti reveal below may fade in marginally early.
+    // rects, so it needs no cached positions of its own, and a refresh mid
+    // scroll re-measures every trigger on the page while the user is moving
+    // (it is what used to corrupt the old pinned Esperienze stage). The only
+    // cost is that the Contatti reveal below may fade in marginally early.
 }
 
 function enableServiziAccordion() {
@@ -494,10 +494,7 @@ function enableServiziAccordion() {
                 trigger: section,
                 // Deliberately spans the whole page. Correctness comes entirely
                 // from the live rects read in evaluate(), so any cached window
-                // is dead weight — and a cached one was wrong anyway: this
-                // trigger is built before the Esperienze pin inserts its spacer,
-                // which shifts this section down by the pin's length. Costs four
-                // rect reads per scroll event.
+                // is dead weight. Costs four rect reads per scroll event.
                 start: 0,
                 end: 'max',
                 onUpdate: evaluate,
@@ -518,185 +515,6 @@ function enableServiziAccordion() {
             card.classList.remove('is-open', 'is-active');
         });
     };
-}
-
-/* Esperienze: the stage is pinned and each experience slides up over the one
-   before it. Descriptions stay open throughout — nothing is hidden behind a
-   toggle. Falls back to a plain list only when motion is reduced or the
-   viewport is not a phone. */
-function enableExpStack() {
-    if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined') return null;
-
-    const stage = document.querySelector('.exp-stage');
-    const timeline = document.querySelector('#esperienze .timeline');
-    if (!stage || !timeline) return null;
-
-    const cards = gsap.utils.toArray('.exp-stage .exp-item');
-    if (cards.length < 2) return null;
-
-    let steps = null;
-    const mm = gsap.matchMedia();
-
-    mm.add('(max-width: 639px) and (prefers-reduced-motion: no-preference)', () => {
-        stage.classList.add('is-stacked');
-        timeline.classList.add('is-stacked-parent');
-
-        // Built before the measurement below: the HUD occupies a fixed band at
-        // the top of the stage and the panels are inset underneath it, so its
-        // height is part of the space the copy has to fit into.
-        steps = buildExpSteps(stage, cards.length);
-
-        // scrollHeight is useless for this: the panels are absolutely
-        // positioned to fill the stage and centre their content, so when the
-        // copy is too tall it overflows equally in both directions — and
-        // scrollHeight only ever reports overflow past the bottom edge. It
-        // therefore reported "fits" on viewports where the text was in fact
-        // being clipped top and bottom. Measure the intrinsic height instead,
-        // by letting the panel size to its own content for one read.
-        const measureTallest = () => Math.max(...cards.map(c => {
-            const inline = c.getAttribute('style');
-            c.style.position = 'static';
-            c.style.height = 'auto';
-            c.style.inset = 'auto';
-            const natural = c.offsetHeight;
-            if (inline === null) c.removeAttribute('style');
-            else c.setAttribute('style', inline);
-            return natural;
-        }));
-
-        const available = () => stage.clientHeight - steps.height();
-
-        // The fit result now only chooses how tightly the panel is set — it can
-        // no longer cancel the animation. Dropping to the plain list keyed off a
-        // measurement that goes wrong in too many real conditions (a browser
-        // without svh collapsing the stage onto its min-height, Android text
-        // scaling inflating the copy), which is why the section arrived
-        // unanimated on some phones and animated on others.
-        let tallest = measureTallest();
-        if (tallest > available()) {
-            stage.classList.add('is-compact');
-            tallest = measureTallest();
-        }
-
-        // Last resort: set the copy from the top instead of centring it, so any
-        // remaining overflow falls off the bottom edge only rather than being
-        // clipped at the head and the foot at once.
-        stage.classList.toggle('is-tight', tallest > available());
-
-        const tl = gsap.timeline({
-            scrollTrigger: {
-                trigger: stage,
-                // Fixed px, not a percentage: this clears the fixed-height nav
-                // (81px), which does not scale with viewport height. Kept in
-                // step with the stage's height reserve in the stylesheet.
-                start: 'top 84px',
-                end: () => '+=' + Math.round(window.innerHeight * 0.85 * (cards.length - 1)),
-                pin: true,
-                scrub: 0.5,
-                anticipatePin: 1,
-                invalidateOnRefresh: true,
-                onUpdate: self => steps.update(self.progress),
-            },
-        });
-
-        // ease: 'none' keeps the panel's travel locked 1:1 to the scrub.
-        for (let i = 1; i < cards.length; i++) {
-            tl.fromTo(cards[i], {yPercent: 100}, {yPercent: 0, ease: 'none'}, i - 1)
-                .fromTo(cards[i - 1], {scale: 1, opacity: 1}, {
-                    scale: 0.94,
-                    opacity: 0.3,
-                    ease: 'none',
-                }, i - 1);
-        }
-
-        return () => {
-            stage.classList.remove('is-stacked', 'is-compact', 'is-tight');
-            timeline.classList.remove('is-stacked-parent');
-            if (steps) steps.destroy();
-            steps = null;
-            gsap.set(cards, {clearProps: 'transform,opacity,scale'});
-        };
-    });
-
-    return () => {
-        mm.revert();
-        if (steps) steps.destroy();
-    };
-}
-
-/* The progress HUD. It used to float over the bottom-left corner of the stage,
-   where a centred panel's own copy ran straight underneath it; it now owns a
-   band across the top of the stage that the panels are inset below, so the two
-   cannot collide whatever the length of the text. */
-function buildExpSteps(stage, count) {
-    const hud = document.createElement('div');
-    hud.className = 'exp-hud';
-    hud.setAttribute('aria-hidden', 'true');
-
-    const meta = document.createElement('div');
-    meta.className = 'exp-hud-meta';
-
-    const title = document.createElement('span');
-    title.className = 'exp-hud-title';
-    title.textContent = 'Percorso';
-
-    const counter = document.createElement('span');
-    counter.className = 'exp-hud-count';
-    const current = document.createElement('span');
-    current.className = 'exp-hud-cur';
-    current.textContent = '01';
-    const total = document.createElement('span');
-    total.textContent = ` / ${String(count).padStart(2, '0')}`;
-    counter.append(current, total);
-
-    meta.append(title, counter);
-
-    const rail = document.createElement('div');
-    rail.className = 'exp-hud-rail';
-
-    const segments = [];
-    for (let i = 0; i < count; i++) {
-        const seg = document.createElement('span');
-        seg.className = 'exp-hud-seg';
-        const fill = document.createElement('i');
-        fill.className = 'exp-hud-fill';
-        seg.appendChild(fill);
-        rail.appendChild(seg);
-        segments.push({seg, fill});
-    }
-
-    hud.append(meta, rail);
-    stage.appendChild(hud);
-
-    // count panels but count - 1 transitions: the first segment is full from
-    // the outset, and segment i drains its fill across transition i - 1. Each
-    // fill is scaled rather than toggled so the rail tracks the scrub
-    // continuously instead of snapping a step at a time.
-    const spans = Math.max(1, count - 1);
-
-    const api = {
-        update(progress) {
-            const pos = gsap.utils.clamp(0, spans, progress * spans);
-            segments.forEach(({seg, fill}, i) => {
-                const value = i === 0 ? 1 : gsap.utils.clamp(0, 1, pos - (i - 1));
-                fill.style.transform = `scaleX(${value})`;
-                seg.classList.toggle('is-on', value > 0.001);
-            });
-            const active = Math.min(count - 1, Math.round(pos));
-            current.textContent = String(active + 1).padStart(2, '0');
-        },
-        // Read back rather than assumed: the fit measurement subtracts this from
-        // the stage, so a restyled HUD stays in step with it on its own.
-        height() {
-            return hud.offsetHeight;
-        },
-        destroy() {
-            hud.remove();
-        },
-    };
-
-    api.update(0);
-    return api;
 }
 
 /* ---------------------------------------------------------------
@@ -723,29 +541,140 @@ function initCounters() {
 }
 
 /* ---------------------------------------------------------------
-   TIMELINE — the rail draws itself as you scroll, dots light up
+   ESPERIENZE — il binario si disegna verso il presente.
+   Nessun pin: la sezione scorre come il resto della pagina, uguale su
+   ogni viewport. Una testa luminosa scende lungo il binario agganciata
+   a una linea di lettura fissa; quando raggiunge un nodo l'esperienza
+   si accende, e a fine corsa attracca sul terminale "oggi".
    --------------------------------------------------------------- */
 function initTimeline() {
     if (!HAS_GSAP || typeof ScrollTrigger === 'undefined') return;
 
-    const fill = document.querySelector('.timeline-fill');
-    const timeline = document.querySelector('.timeline');
+    const timeline = document.querySelector('#esperienze .timeline');
+    if (!timeline) return;
 
-    if (fill && timeline && !REDUCE) {
-        gsap.to(fill, {
-            scaleY: 1,
-            ease: 'none',
-            scrollTrigger: {trigger: timeline, start: 'top 72%', end: 'bottom 78%', scrub: 0.4},
+    const track = timeline.querySelector('.timeline-track');
+    const fill = timeline.querySelector('.timeline-fill');
+    const items = gsap.utils.toArray('.exp-item', timeline);
+    if (!track || !fill || !items.length) return;
+
+    // La testa nasce qui e non nel markup: senza JS non avrebbe nulla da
+    // seguire, e il binario resta la linea spenta del layout statico.
+    const head = document.createElement('span');
+    head.className = 'timeline-head';
+    track.appendChild(head);
+
+    // Solo da qui il CSS può tenere "in attesa" le esperienze non ancora
+    // raggiunte: senza questa classe restano nello stato pieno.
+    timeline.classList.add('is-armed');
+
+    // Posizione di ogni nodo come frazione del binario. Con offsetTop e non
+    // con getBoundingClientRect, che risentirebbe dei transform dei reveal.
+    let stops = [];
+    const measure = () => {
+        const length = track.offsetHeight || 1;
+        stops = items.map(item => {
+            const dot = item.querySelector('.exp-dot');
+            const y = item.offsetTop + (dot ? dot.offsetTop + dot.offsetHeight / 2 : 0);
+            return (y - track.offsetTop) / length;
+        });
+    };
+
+    // is-active: nodo raggiunto, resta acceso (il tratto già percorso).
+    // is-current: una sola esperienza per volta, quella su cui si trova la
+    // testa — su telefono fa le veci dell'hover, che lì non esiste.
+    // Con il movimento ridotto il binario è già pieno (vedi CSS), quindi i
+    // nodi sono accesi da subito e resta solo il cambio di is-current.
+    const render = progress => {
+        let current = -1;
+        items.forEach((item, i) => {
+            const reached = progress > 0 && progress >= stops[i];
+            if (reached) current = i;
+            item.classList.toggle('is-active', REDUCE || reached);
+        });
+        items.forEach((item, i) => item.classList.toggle('is-current', i === current));
+        timeline.classList.toggle('is-running', !REDUCE && progress > 0 && progress < 0.999);
+        timeline.classList.toggle('is-complete', REDUCE || progress >= 0.999);
+    };
+
+    // La stessa linea della viewport apre e chiude la corsa: la testa resta
+    // quindi ferma a quell'altezza mentre il contenuto le scorre accanto.
+    const line = {trigger: track, start: 'top 60%', end: 'bottom 60%'};
+
+    measure();
+
+    if (REDUCE) {
+        ScrollTrigger.create({
+            ...line,
+            onRefresh: self => {
+                measure();
+                render(self.progress);
+            },
+            onUpdate: self => render(self.progress),
+        });
+        render(0);
+        return;
+    }
+
+    // Le classi seguono l'avanzamento del tween e non quello dello scroll:
+    // lo scrub ammorbidisce la testa, e un nodo deve accendersi quando la
+    // testa lo tocca davvero, non quando lo scroll ci è già passato.
+    let travel = null;
+    const sync = () => render(travel ? travel.progress() : 0);
+    travel = gsap.timeline({
+        defaults: {ease: 'none'},
+        onUpdate: sync,
+        scrollTrigger: {
+            ...line,
+            scrub: 0.5,
+            onRefresh: () => {
+                measure();
+                sync();
+            },
+        },
+    });
+    travel.fromTo(fill, {scaleY: 0}, {scaleY: 1}, 0)
+        .fromTo(head, {yPercent: -100}, {yPercent: 0}, 0);
+    sync();
+
+    // Reveal. L'etichetta entra come nelle altre sezioni; ogni esperienza ha
+    // poi la propria sequenza, agganciata alla sua posizione e non a quella
+    // della sezione: su telefono la seconda è una schermata più in basso.
+    const section = timeline.closest('section');
+    const label = section && section.querySelector('.section-label');
+    if (label) {
+        gsap.fromTo(label, {opacity: 0, y: 24}, {
+            opacity: 1,
+            y: 0,
+            duration: 0.6,
+            ease: 'power2.out',
+            scrollTrigger: {trigger: section, start: 'top 82%', toggleActions: 'play none none none'},
         });
     }
 
-    gsap.utils.toArray('.exp-item').forEach(item => {
-        ScrollTrigger.create({
-            trigger: item,
-            start: 'top 82%',
-            once: true,
-            onEnter: () => item.classList.add('is-active'),
-        });
+    items.forEach(item => {
+        const q = gsap.utils.selector(item);
+        // Solo fromTo (mai from), come per tutti i reveal della pagina.
+        gsap.timeline({
+            defaults: {ease: 'power3.out'},
+            scrollTrigger: {trigger: item, start: 'top 86%', once: true},
+        })
+            .fromTo(q('.exp-ghost'), {opacity: 0, xPercent: 14}, {opacity: 1, xPercent: 0, duration: 1.2}, 0)
+            .fromTo(q('.exp-date'), {opacity: 0, x: -14}, {opacity: 1, x: 0, duration: 0.6}, 0)
+            // Stessa resa delle righe mascherate di About e Contatti, ma con
+            // clip-path sull'elemento: il ritaglio viaggia con il titolo, così
+            // il bordo basso resta fermo senza bisogno di un wrapper.
+            .fromTo(q('.exp-role'), {yPercent: 100, clipPath: 'inset(0% 0% 100% 0%)'}, {
+                yPercent: 0,
+                clipPath: 'inset(0% 0% 0% 0%)',
+                duration: 0.95,
+                clearProps: 'clipPath,transform',
+            }, 0.06)
+            .fromTo(q('.exp-company'), {opacity: 0}, {opacity: 1, duration: 0.6}, 0.3)
+            .fromTo(q('.exp-desc p'), {opacity: 0, y: 16}, {opacity: 1, y: 0, duration: 0.7, stagger: 0.08}, 0.36)
+            // Solo opacità: i badge hanno una transition CSS su transform
+            // (hover), che inseguirebbe ogni frame di un tween di posizione.
+            .fromTo(q('.skill-badge'), {opacity: 0}, {opacity: 1, duration: 0.4, stagger: 0.035}, 0.6);
     });
 }
 
@@ -921,6 +850,8 @@ function initScrollAnimations() {
 
     // Sections whose children are staggered individually (below) are skipped here
     // to avoid double-animating the same elements, which caused the overlap glitch.
+    // Esperienze è in elenco ma non fra i gruppi qui sotto: etichetta ed
+    // esperienze hanno il loro reveal in initTimeline.
     const staggeredSectionIds = new Set(['skills', 'servizi', 'esperienze']);
     document.querySelectorAll('section:not(#hero)').forEach(section => {
         if (staggeredSectionIds.has(section.id)) return;
@@ -940,7 +871,6 @@ function initScrollAnimations() {
     const staggerGroups = [
         '#skills .tier-label, #skills .tier1-group-label, #skills .skill-card, #skills .skill-tag',
         '#servizi .servizio-card',
-        '#esperienze .exp-item',
     ];
     staggerGroups.forEach(selector => {
         const items = gsap.utils.toArray(selector);

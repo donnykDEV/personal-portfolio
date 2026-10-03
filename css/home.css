@@ -753,7 +753,11 @@ section {
 /* ESPERIENZE */
 #esperienze .timeline {
     position: relative;
-    padding-left: 28px;
+    /* Distanza fra binario e testo. La leggono il padding qui sotto e la
+       posizione di nodi, tacche e terminale: per cambiarla a un breakpoint
+       basta ridefinire questa variabile. */
+    --rail-gap: 28px;
+    padding-left: var(--rail-gap);
 }
 
 .exp-item {
@@ -1127,7 +1131,7 @@ textarea.form-input {
     }
 
     #esperienze .timeline {
-        padding-left: 40px;
+        --rail-gap: 40px;
     }
 }
 
@@ -2111,7 +2115,15 @@ nav.is-scrolled::before {
     transform: translateY(-2px);
 }
 
-/* ---- ESPERIENZE ---- */
+/* ---- ESPERIENZE ----
+   Il binario si disegna verso il presente: initTimeline (script.js) fa
+   scendere riempimento e testa con lo scroll e assegna gli stati.
+     .timeline.is-armed      JS attivo: le esperienze non raggiunte attendono
+     .exp-item.is-active     nodo raggiunto, resta acceso
+     .exp-item.is-current    l'esperienza su cui si trova la testa (una sola)
+     .timeline.is-running    testa in corsa
+     .timeline.is-complete   testa attraccata sul terminale
+   Senza JS nessuna di queste classi esiste e resta l'elenco statico. */
 .timeline-track {
     position: absolute;
     left: 0;
@@ -2119,6 +2131,10 @@ nav.is-scrolled::before {
     bottom: 0;
     width: 1px;
     background: var(--line);
+    /* Taglia solo il bordo alto: a inizio corsa la scia della testa è più
+       lunga del tratto percorso e salirebbe sopra il binario. Gli altri lati
+       restano larghi per non mozzare i bagliori. */
+    clip-path: inset(0 -40px -40px -40px);
 }
 
 .timeline-fill {
@@ -2132,16 +2148,63 @@ nav.is-scrolled::before {
     transform-origin: top center;
 }
 
+/* Testa del binario, creata da script.js. È alta quanto il binario e viene
+   traslata della propria altezza (yPercent): il punto luminoso sul suo bordo
+   basso segue così la punta del riempimento senza animare proprietà di layout.
+   Nessun transform qui: GSAP lo leggerebbe come offset di partenza in px e lo
+   sommerebbe al proprio, portando la testa un binario intero più in alto. */
+.timeline-head {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+}
+
+.timeline.is-running .timeline-head {
+    opacity: 1;
+}
+
+/* Scia: l'ultimo tratto dietro la testa è più caldo del resto del binario. */
+.timeline-head::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 1px;
+    height: 72px;
+    background: linear-gradient(to top, #d9ffd2, rgba(57, 255, 20, 0));
+}
+
+.timeline-head::after {
+    content: '';
+    position: absolute;
+    left: -2px;
+    bottom: -3px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #eaffe6;
+    box-shadow: 0 0 0 1px rgba(57, 255, 20, 0.55), 0 0 12px 2px var(--green), 0 0 28px 4px rgba(57, 255, 20, 0.35);
+}
+
 .exp-dot {
     position: absolute;
-    left: -32.5px;
+    /* Centrato sul binario: il nodo è largo 9px, il binario 1px. */
+    left: calc(-1 * var(--rail-gap) - 4px);
     top: 6px;
     width: 9px;
     height: 9px;
     border-radius: 50%;
     background: #1f1f1f;
     border: 1px solid #2e2e2e;
-    transition: background 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
+    transition: background 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease, transform 0.6s var(--ease-out);
+}
+
+/* In attesa il nodo è appena più piccolo: l'accensione si legge anche come
+   uno scatto di scala, non solo come cambio di colore. */
+.timeline.is-armed .exp-item:not(.is-active) .exp-dot {
+    transform: scale(0.7);
 }
 
 .exp-item.is-active .exp-dot {
@@ -2150,7 +2213,9 @@ nav.is-scrolled::before {
     box-shadow: 0 0 14px var(--green);
 }
 
-.exp-item.is-active .exp-dot::after {
+/* L'onda resta solo sull'esperienza corrente: su tutti i nodi accesi
+   smetterebbe di indicare dove ci si trova. */
+.exp-item.is-current .exp-dot::after {
     content: '';
     position: absolute;
     inset: -6px;
@@ -2176,10 +2241,30 @@ nav.is-scrolled::before {
     isolation: isolate;
 }
 
+/* Tacca fra nodo e data: parte dal nodo nel momento in cui si accende. */
+.exp-item::before {
+    content: '';
+    position: absolute;
+    top: 10px;
+    left: calc(-1 * var(--rail-gap) + 9px);
+    width: calc(var(--rail-gap) - 16px);
+    height: 1px;
+    background: linear-gradient(to right, var(--green), var(--green-dim));
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform 0.6s var(--ease-out) 0.12s;
+}
+
+.exp-item.is-active::before {
+    transform: scaleX(1);
+}
+
 .exp-ghost {
     position: absolute;
     top: -18px;
     right: 0;
+    /* Sotto il testo, ma dentro lo stacking context dell'esperienza
+       (isolation: isolate qui sopra), quindi mai dietro lo sfondo. */
     z-index: -1;
     font-family: var(--font-display);
     font-size: clamp(64px, 14vw, 128px);
@@ -2189,12 +2274,34 @@ nav.is-scrolled::before {
     -webkit-text-stroke: 1px #1c1c1c;
     pointer-events: none;
     user-select: none;
-    z-index: 0;
-    transition: -webkit-text-stroke-color 0.5s ease, opacity 0.5s ease;
+    /* Niente opacity qui: la anima il reveal di script.js, e una transition
+       CSS sulla stessa proprietà ne inseguirebbe ogni frame. */
+    transition: -webkit-text-stroke-color 0.5s ease;
 }
 
-.exp-item:hover .exp-ghost {
+.exp-item:hover .exp-ghost,
+.exp-item.is-current .exp-ghost {
     -webkit-text-stroke-color: #24361f;
+}
+
+/* Il divisore della durata non deve restare appeso a inizio riga quando la
+   data va a capo (telefoni stretti, durate lunghe). La durata rientra a
+   sinistra di quanto misurano bordo e padding, e il clip-path taglia solo
+   quel lato: a capo il bordo cade fuori, sulla stessa riga resta dov'era. */
+.exp-date {
+    gap: 4px 0;
+    clip-path: inset(-12px -12px -12px 0);
+    transition: color 0.5s ease;
+}
+
+.exp-date > :first-child {
+    margin-right: 25px;
+}
+
+/* Finché la testa non raggiunge il nodo la data resta neutra. Il colore è
+   scelto per restare leggibile (oltre 4.5:1 sul fondo) anche se ci si ferma lì. */
+.timeline.is-armed .exp-item:not(.is-active) .exp-date {
+    color: #7d8a78;
 }
 
 .exp-date-live::after {
@@ -2221,8 +2328,9 @@ nav.is-scrolled::before {
 /* Duration is computed from the dates in script.js so the current role never
    goes stale. Empty until then, hence the :not(:empty) guard on the divider. */
 .exp-duration:not(:empty) {
-    color: #55524d;
+    color: #827f78;
     letter-spacing: 0.1em;
+    margin-left: -13px;
     padding-left: 12px;
     border-left: 1px solid #2a2a2a;
 }
@@ -2239,13 +2347,14 @@ nav.is-scrolled::before {
    as a dead stop. */
 .te-dot {
     position: absolute;
-    left: -32px;
+    left: calc(-1 * var(--rail-gap) - 4px);
     bottom: -5px;
     width: 9px;
     height: 9px;
     border-radius: 50%;
     border: 1px solid var(--green-dim);
     background: var(--bg);
+    transition: border-color 0.5s ease, box-shadow 0.5s ease;
 }
 
 .te-dot::after {
@@ -2255,6 +2364,23 @@ nav.is-scrolled::before {
     border-radius: 50%;
     background: var(--green);
     box-shadow: 0 0 8px var(--green);
+    transition: background 0.5s ease, box-shadow 0.5s ease, transform 0.6s var(--ease-out);
+}
+
+/* Con JS attivo il terminale resta spento finché la testa non ci attracca. */
+.timeline.is-armed:not(.is-complete) .te-dot {
+    border-color: #2e2e2e;
+}
+
+.timeline.is-armed:not(.is-complete) .te-dot::after {
+    background: #2e2e2e;
+    box-shadow: none;
+    transform: scale(0.6);
+}
+
+.timeline.is-complete .te-dot {
+    border-color: var(--green);
+    box-shadow: 0 0 14px rgba(57, 255, 20, 0.45);
 }
 
 /* ---- SERVIZI ---- */
@@ -2487,10 +2613,6 @@ nav.is-scrolled::before {
 
 /* ---- TABLET / DESKTOP OVERRIDES FOR THE PREMIUM LAYER ---- */
 @media (max-width: 639px) {
-    .exp-ghost {
-        display: none;
-    }
-
     .servizio-ghost {
         font-size: 92px;
     }
@@ -2552,22 +2674,14 @@ nav.is-scrolled::before {
     .about-meta {
         max-width: 420px;
     }
-
-    /* Wider left gutter on desktop: moved here (rather than the earlier
-       1024px block) so it lands after the unconditional .exp-dot/.te-dot
-       base rules further down and actually wins the cascade. */
-    .exp-dot,
-    .te-dot {
-        left: -44.5px;
-    }
 }
 
 /* ============================================================
    MOBILE UX — <= 639px
    Stacked full-width, the page ran ~9 screens tall on a phone.
    Here the vertical sections change shape instead of just shrinking:
-   skill groups become horizontal snap rails, servizi becomes an
-   accordion, and long experience copy collapses behind a toggle.
+   skill groups become horizontal snap rails and servizi becomes an
+   accordion. Esperienze keeps its rail and scrolls naturally.
    ============================================================ */
 @media (max-width: 639px) {
     section {
@@ -2792,211 +2906,36 @@ nav.is-scrolled::before {
         opacity: 1;
     }
 
-    /* ---- ESPERIENZE: pinned stack ----
-       Descriptions stay open. The stage is pinned full-height and each
-       experience is a full-bleed panel that slides up over the previous one.
-       All of this is gated on .is-stacked, which script.js adds on a phone
-       viewport when motion is not reduced — otherwise the section stays an
-       ordinary stacked list. How well the copy fits only picks a tier
-       (.is-compact, then .is-tight); it never cancels the animation. */
+    /* ---- ESPERIENZE ----
+       Stesso binario del desktop, senza pin: la sezione scorre in modo
+       naturale e nessun testo può finire tagliato, qualunque sia l'altezza
+       reale del telefono. Qui cambiano solo le misure, più lo stato corrente
+       che fa le veci dell'hover (stessa scelta dell'accordion dei servizi). */
+    #esperienze .timeline {
+        --rail-gap: 22px;
+    }
+
     .exp-item {
-        margin-bottom: 40px;
+        margin-bottom: 44px;
     }
 
     .exp-item .skill-badges {
-        margin-top: 14px;
+        margin-top: 16px;
     }
 
-    .exp-stage.is-stacked {
-        position: relative;
-        /* Height of the HUD band across the top. script.js reads it back off the
-           element, so this single value keeps the layout and the fit
-           measurement in step. */
-        --exp-hud-h: 54px;
-        /* Reserve only what the pin actually needs: the nav is 81px, the pin
-           parks just below it, and this leaves ~16px under the panel.
-           NOTE: svh is the viewport with the browser toolbars *shown*, so on a
-           real phone this is markedly shorter than the window height — and
-           DevTools device emulation cannot reproduce that, resolving svh to the
-           full emulated height. Never judge whether this fits from emulation
-           alone; check against the stage height directly. The vh line before it
-           is the fallback for browsers without svh (Samsung Internet below v21,
-           among others), which would otherwise drop the declaration entirely
-           and collapse the stage onto its min-height. */
-        height: calc(100vh - 100px);
-        height: calc(100svh - 100px);
-        min-height: 470px;
-        overflow: hidden;
-        margin: 0 -24px;
-    }
-
-    /* Inset below the HUD band rather than filling the stage, so a panel's copy
-       can never run under the progress rail. */
-    .exp-stage.is-stacked .exp-item {
-        position: absolute;
-        inset: var(--exp-hud-h) 0 0;
-        margin: 0;
-        padding: 18px 24px 22px;
-        /* Opaque so a panel genuinely covers the one beneath it. */
-        background: var(--bg);
-        border-top: 2px solid var(--green);
-        will-change: transform;
-        /* Centred: the copy is shorter than a full-height panel, and leaving
-           the slack all at the bottom made the composition look unfinished. */
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-    }
-
-    /* Third tier, set by script.js when even the compact panel overruns the
-       stage. Centring would then clip the copy at both ends at once; setting it
-       from the top keeps the opening lines intact and spends the overflow at
-       the bottom edge alone. */
-    .exp-stage.is-stacked.is-tight .exp-item {
-        justify-content: flex-start;
-    }
-
-    /* The rail belongs to the list layout, not the stack. */
-    .exp-stage.is-stacked ~ .timeline-end,
-    .exp-stage.is-stacked .exp-dot {
+    /* Su una colonna così stretta il numero finirebbe sotto titolo e azienda:
+       qui il binario basta da solo a dare la sequenza. */
+    .exp-ghost {
         display: none;
     }
 
-    .is-stacked-parent .timeline-track {
-        display: none;
+    /* Il titolo va a capo: righe bilanciate invece di una parola orfana. */
+    .exp-role {
+        text-wrap: balance;
     }
 
-    .is-stacked-parent {
-        padding-left: 0;
-    }
-
-    .exp-stage.is-stacked .exp-ghost {
-        top: auto;
-        bottom: 4px;
-        right: 18px;
-        opacity: 0.75;
-    }
-
-    /* Slightly tighter copy inside a stacked panel, so the default tier already
-       fits on most phones. */
-    .exp-stage.is-stacked .exp-desc {
-        font-size: 14px;
-        line-height: 1.6;
-    }
-
-    .exp-stage.is-stacked .exp-desc p {
-        margin-bottom: 11px;
-    }
-
-    /* Second tier, applied by script.js only when the normal panel does not fit
-       the real stage height. Buys roughly 90px, which is enough for the copy to
-       sit comfortably on short viewports. */
-    .exp-stage.is-stacked.is-compact .exp-item {
-        padding: 13px 24px 18px;
-    }
-
-    .exp-stage.is-stacked.is-compact .exp-role {
-        font-size: 19px;
-    }
-
-    .exp-stage.is-stacked.is-compact .exp-company {
-        font-size: 12px;
-        margin-bottom: 12px;
-    }
-
-    .exp-stage.is-stacked.is-compact .exp-lead {
-        margin-bottom: 8px;
-    }
-
-    .exp-stage.is-stacked.is-compact .exp-desc {
-        font-size: 12.5px;
-        line-height: 1.5;
-    }
-
-    .exp-stage.is-stacked.is-compact .exp-desc p {
-        margin-bottom: 8px;
-    }
-
-    .exp-stage.is-stacked.is-compact .skill-badges {
-        gap: 5px;
-        margin-top: 10px;
-    }
-
-    .exp-stage.is-stacked.is-compact .skill-badge {
-        font-size: 9px;
-        padding: 2px 6px;
-    }
-
-    .exp-stage.is-stacked.is-compact .exp-date {
-        margin-bottom: 8px;
-    }
-
-    /* Progress HUD, built by script.js. It holds the top band of the stage and
-       the panels are inset beneath it (--exp-hud-h), so it no longer needs to
-       float over the copy on its own opaque plate — which is precisely what it
-       used to collide with mid-slide. */
-    .exp-hud {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: var(--exp-hud-h);
-        z-index: 5;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        gap: 10px;
-        padding: 0 24px;
-        background: var(--bg);
-    }
-
-    .exp-hud-meta {
-        display: flex;
-        align-items: baseline;
-        justify-content: space-between;
-        font-family: var(--font-mono);
-        font-size: 10px;
-        letter-spacing: 0.22em;
-        text-transform: uppercase;
-        color: #55524d;
-    }
-
-    .exp-hud-count {
-        letter-spacing: 0.18em;
-    }
-
-    .exp-hud-cur {
+    .exp-item.is-current .exp-role {
         color: var(--green);
-    }
-
-    .exp-hud-rail {
-        display: flex;
-        gap: 6px;
-    }
-
-    /* One segment per experience, each filled by a scaled child rather than a
-       toggled background: the fill then tracks the scrub continuously instead
-       of snapping a whole step at a time. */
-    .exp-hud-seg {
-        position: relative;
-        flex: 1;
-        height: 2px;
-        background: #232323;
-        overflow: hidden;
-        transition: box-shadow 0.4s ease;
-    }
-
-    .exp-hud-seg.is-on {
-        box-shadow: 0 0 10px rgba(57, 255, 20, 0.35);
-    }
-
-    .exp-hud-fill {
-        position: absolute;
-        inset: 0;
-        background: var(--green);
-        transform: scaleX(0);
-        transform-origin: left center;
-        will-change: transform;
     }
 
     /* ---- CONTATTI ---- */
@@ -3038,12 +2977,20 @@ nav.is-scrolled::before {
     .loader-logo,
     .am-dot,
     .exp-date-live::after,
-    .exp-item.is-active .exp-dot::after {
+    .exp-item.is-current .exp-dot::after {
         animation: none !important;
     }
 
+    /* Binario già pieno e nodi accesi da subito (script.js): resta solo il
+       cambio di colore dello stato corrente, senza nulla che si sposti. */
     .timeline-fill {
         transform: scaleY(1);
+    }
+
+    .exp-dot,
+    .exp-item::before,
+    .te-dot::after {
+        transition-property: background, border-color, box-shadow;
     }
 
     /* Scroll-driven unfolding is disabled for these users (see the
