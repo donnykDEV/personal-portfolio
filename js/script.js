@@ -83,48 +83,197 @@ function splitChars(el) {
     return chars;
 }
 
+/* ---------------------------------------------------------------
+   TERMINALE — la sessione è già tutta nell'HTML (senza JS, con
+   reduced motion o per uno screen reader è completa da subito).
+   Qui la si nasconde prima dell'intro e la si riscrive riga per
+   riga. Cliccando Sissy parte un comando in più.
+   --------------------------------------------------------------- */
+function heroTerminal() {
+    if (heroTerminal.api) return heroTerminal.api;
+
+    const body = document.querySelector('.term-body');
+    const caret = body && body.querySelector('.term-caret');
+    if (!body || !caret) return (heroTerminal.api = {hide() {}, play() {}, pet() {}});
+
+    const lines = Array.from(body.querySelectorAll('.term-line'));
+    const animated = HAS_GSAP && !REDUCE;
+    const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+    // Occupato finché la sessione iniziale non è finita: un clic su Sissy a
+    // metà scrittura non deve infilare righe in mezzo.
+    let busy = animated;
+    let pets = 0;
+
+    const PROMPT = '<span class="term-ps"><svg class="icon" focusable="false"><use href="#i-prompt"/></svg></span>';
+
+    const PURRS = [
+        'prrr... Sissy approva.',
+        'prrr... coccole ricevute: 2',
+        'prrr... ora però scrivi a Lorenzo.',
+    ];
+
+    // Un carattere alla volta, con il ritmo irregolare di una persona e non
+    // di un metronomo. Il cursore resta acceso mentre scrive.
+    const type = async (el, text) => {
+        el.textContent = '';
+        el.after(caret);
+        caret.classList.add('is-typing');
+        for (let i = 1; i <= text.length; i++) {
+            el.textContent = text.slice(0, i);
+            await wait(34 + Math.random() * 46);
+        }
+        caret.classList.remove('is-typing');
+    };
+
+    function hide() {
+        lines.forEach(line => line.classList.add('is-pending'));
+    }
+
+    async function play() {
+        if (!animated) return;
+
+        for (const line of lines) {
+            if (line.classList.contains('term-live')) {
+                line.append(caret);
+                line.classList.remove('is-pending');
+                break;
+            }
+
+            const input = line.querySelector('.term-in');
+            if (input) {
+                // Si scrive il testo semplice; a fine riga torna il markup con
+                // comando e argomenti colorati in modo diverso.
+                const html = input.innerHTML;
+                const text = input.textContent;
+                input.textContent = '';
+                input.after(caret);
+                line.classList.remove('is-pending');
+                await wait(420);
+                await type(input, text);
+                input.innerHTML = html;
+                await wait(240);
+            } else {
+                line.classList.remove('is-pending');
+                await wait(140);
+            }
+        }
+
+        busy = false;
+    }
+
+    async function pet() {
+        if (busy) return;
+        busy = true;
+        pets++;
+
+        // Da qui in poi le righe crescono: il box resta alto com'è e scorre
+        // verso il basso come un terminale vero, senza spostare il layout.
+        if (!body.style.height) {
+            body.style.height = body.offsetHeight + 'px';
+            body.classList.add('is-scrolled');
+        }
+
+        const live = body.querySelector('.term-live');
+        const input = document.createElement('span');
+        input.className = 'term-in';
+        caret.before(input);
+        live.classList.remove('term-live');
+        live.removeAttribute('aria-hidden');
+
+        const cmd = 'accarezza sissy';
+        if (animated) await type(input, cmd);
+        input.innerHTML = 'accarezza <span class="term-arg">sissy</span>';
+
+        const out = document.createElement('p');
+        out.className = 'term-line term-out';
+        out.textContent = PURRS[pets - 1] || `prrr... coccole ricevute: ${pets}`;
+
+        const next = document.createElement('p');
+        next.className = 'term-line term-cmd term-live';
+        next.setAttribute('aria-hidden', 'true');
+        next.innerHTML = PROMPT;
+        next.append(caret);
+
+        body.append(out, next);
+
+        // Le righe uscite dall'alto non servono più.
+        while (body.children.length > 40) body.firstElementChild.remove();
+
+        const bottom = body.scrollHeight - body.clientHeight;
+        if (animated) gsap.to(body, {scrollTop: bottom, duration: 0.35, ease: 'power2.out'});
+        else body.scrollTop = bottom;
+
+        busy = false;
+    }
+
+    return (heroTerminal.api = {hide, play, pet});
+}
+
+/* ---------------------------------------------------------------
+   HERO ENTRANCE — stati iniziali (chiamata su DOMContentLoaded,
+   mentre il loader copre ancora la pagina)
+   --------------------------------------------------------------- */
 function prepHeroIntro() {
     if (!HAS_GSAP || REDUCE) return;
 
     document.querySelectorAll('.hero-name .mask-line-in').forEach(splitChars);
 
     gsap.set('.hero-name .char', {yPercent: 115, opacity: 0});
-    gsap.set(['.hero-tag', '.hero-cta'], {opacity: 0, y: 18});
-    gsap.set('.hero-tagline', {opacity: 0});
-    gsap.set('#sissy-hero', {opacity: 0, scale: 0.82});
-    gsap.set('.hero-deco', {opacity: 0, scale: 0.85});
+    gsap.set('.hero-tagline', {opacity: 0, y: 14, filter: 'blur(6px)'});
+    gsap.set('.hero-cta', {opacity: 0, y: 18});
+    gsap.set('.hero-stack', {opacity: 0, y: 12});
+    gsap.set('.term-ledge', {scaleX: 0});
+    gsap.set('.term-win', {clipPath: 'inset(0% 0% 100% 0%)'});
+    // Solo opacity, non autoAlpha: goToFixed rimette opacity a 1 ma non
+    // tocca visibility, e un decollo durante il loader resterebbe invisibile.
+    gsap.set('#sissy-hero', {opacity: 0, y: -110});
     gsap.set('.hero-frame span', {opacity: 0});
-    gsap.set(['.scroll-line', '.hero-corner'], {opacity: 0});
+    gsap.set('.hero-status .hs-item', {opacity: 0, y: 8});
+
+    heroTerminal().hide();
 }
 
+/* ---------------------------------------------------------------
+   HERO ENTRANCE — un unico momento: il nome sale, il bordo del
+   terminale si accende e lo schermo si srotola, Sissy ci salta
+   sopra (schiacciandosi all'atterraggio), poi il terminale
+   comincia a scrivere.
+   --------------------------------------------------------------- */
 function runHeroIntro() {
+    const term = heroTerminal();
+
     if (!HAS_GSAP || REDUCE) {
-        initTypewriter(300);
         initHeroExitFade();
         return;
     }
 
-    const tl = gsap.timeline({defaults: {ease: 'power3.out'}, onComplete: initHeroExitFade})
-        .to('.hero-name .char', {yPercent: 0, opacity: 1, duration: 0.9, stagger: 0.028}, 0)
-        .to('.hero-tag', {opacity: 1, y: 0, duration: 0.6}, 0.1)
-        .to('.hero-tagline', {opacity: 1, duration: 0.4}, 0.55)
-        .to('.hero-cta', {opacity: 1, y: 0, duration: 0.7}, 0.7)
+    const tl = gsap.timeline({defaults: {ease: 'expo.out'}, onComplete: initHeroExitFade})
+        .to('.hero-name .char', {yPercent: 0, opacity: 1, duration: 0.9, stagger: 0.028, ease: 'power3.out'}, 0)
+        .to('.term-ledge', {scaleX: 1, duration: 0.9, ease: 'expo.inOut'}, 0.25)
+        .to('.hero-tagline', {opacity: 1, y: 0, filter: 'blur(0px)', duration: 1, clearProps: 'filter'}, 0.4)
+        .to('.hero-cta', {opacity: 1, y: 0, duration: 0.9}, 0.55)
+        .to('.hero-stack', {opacity: 1, y: 0, duration: 1}, 0.8)
         .to('.hero-frame span', {opacity: 0.5, duration: 0.6, stagger: 0.08}, 0.6)
-        .to(['.scroll-line', '.hero-corner'], {opacity: 1, duration: 0.6}, 0.9);
+        .to('.term-win', {clipPath: 'inset(0% 0% 0% 0%)', duration: 1, clearProps: 'clipPath'}, 0.7)
+        .to('.hero-status .hs-item', {opacity: 1, y: 0, duration: 0.7, stagger: 0.08}, 0.9);
 
     // If the page was restored mid-scroll, Sissy has already flown to the corner —
-    // fading her back in here would resurrect the hero copy on top of it.
+    // landing her here would resurrect the hero copy on top of it.
     if ((window.scrollY || window.pageYOffset || 0) <= 100) {
-        tl.to('#sissy-hero', {opacity: 1, scale: 1, duration: 0.9, ease: 'back.out(1.5)'}, 0.3)
-            .to('.hero-deco', {opacity: 1, scale: 1, duration: 1.1}, 0.45);
+        tl.to('#sissy-hero', {opacity: 1, duration: 0.15, ease: 'none'}, 0.85)
+            .to('#sissy-hero', {y: 0, duration: 0.4, ease: 'power2.in'}, 0.85)
+            .to('#sissy-hero', {scaleX: 1.1, scaleY: 0.84, duration: 0.08, ease: 'power1.out'})
+            .to('#sissy-hero', {scaleX: 1, scaleY: 1, duration: 0.7, ease: 'elastic.out(1, 0.4)'})
+            .call(() => initSissy.landed(), null, '<+0.5');
     }
 
-    initTypewriter(700);
+    tl.call(() => term.play(), null, 1.9);
 }
 
 /* ---------------------------------------------------------------
-   HERO EXIT FADE — "Roma, IT" / clock and the corner brackets sit at
-   the bottom of a hero that is exactly one viewport tall. Riding along
+   HERO EXIT FADE — the status bar (availability, clock, links) and the corner
+   brackets sit at the bottom of a hero that is exactly one viewport tall. Riding along
    unfaded to the literal pixel edge meant they were still on screen,
    tucked under the fixed nav, well after About had scrolled into view
    and become the readable content below them.
@@ -139,7 +288,7 @@ function initHeroExitFade() {
     if (!HAS_GSAP || typeof ScrollTrigger === 'undefined') return;
 
     const hero = document.getElementById('hero');
-    const targets = document.querySelectorAll('.hero-frame, .hero-corner');
+    const targets = document.querySelectorAll('.hero-frame, .hero-status');
     if (!hero || !targets.length) return;
 
     // Percentage end (not a fixed px) so the fade completes at the same
@@ -175,12 +324,11 @@ function initHeroExitFade() {
 }
 
 /* ---------------------------------------------------------------
-   SCROLL CHROME — progress bar, nav state, background parallax
+   SCROLL CHROME — progress bar, nav state
    --------------------------------------------------------------- */
 function initScrollChrome() {
     const bar = document.querySelector('#scroll-progress span');
     const nav = document.getElementById('nav');
-    const grid = document.querySelector('.bg-grid');
     let ticking = false;
 
     const update = () => {
@@ -190,7 +338,6 @@ function initScrollChrome() {
 
         if (bar) bar.style.transform = `scaleX(${max > 0 ? Math.min(y / max, 1) : 0})`;
         if (nav) nav.classList.toggle('is-scrolled', y > 40);
-        if (grid && !REDUCE) grid.style.setProperty('--bg-shift', (y * -0.05).toFixed(2));
     };
 
     const onScroll = () => {
@@ -230,7 +377,7 @@ function initScrollSpy() {
 }
 
 /* ---------------------------------------------------------------
-   MARQUEE — clone the set once so translateX(-50%) loops seamlessly
+   MARQUEE — clone the set once so translateX(-50%) loops seamlessly (hero tech ticker)
    --------------------------------------------------------------- */
 function initMarquee() {
     const track = document.getElementById('marquee-track');
@@ -281,7 +428,7 @@ function initMagnetic() {
 }
 
 /* ---------------------------------------------------------------
-   LIVE CLOCK — Rome local time in the hero corner
+   LIVE CLOCK — Rome local time in the hero status bar
    --------------------------------------------------------------- */
 function initClock() {
     const el = document.getElementById('local-time');
@@ -721,7 +868,7 @@ function initCursor() {
     }, {passive: true});
 
     // Scale rather than width/height: same look, no layout on hover.
-    const hoverables = 'a, button, .skill-card, .skill-tag, .servizio-card, .contact-status, .am-row, .marquee';
+    const hoverables = 'a, button, .skill-card, .skill-tag, .servizio-card, .contact-status, .am-row';
     document.querySelectorAll(hoverables).forEach(el => {
         el.addEventListener('mouseenter', () => gsap.to(ring, {scale: 1.7, opacity: 0.3, duration: 0.25}));
         el.addEventListener('mouseleave', () => gsap.to(ring, {scale: 1, opacity: 0.6, duration: 0.25}));
@@ -909,63 +1056,65 @@ function initScrollAnimations() {
     });
 }
 
-function initTypewriter(startDelay) {
-    if (REDUCE) return;
-
-    const target = document.querySelector('.hero-tagline .type-target');
-    if (!target) return;
-
-    const text = target.textContent;
-    target.textContent = '';
-
-    let i = 0;
-    const typeNext = () => {
-        target.textContent = text.slice(0, i);
-        i++;
-        if (i <= text.length) setTimeout(typeNext, 32);
-    };
-
-    setTimeout(typeNext, startDelay);
-}
-
+/* ---------------------------------------------------------------
+   SISSY — stessa macchina a stati di produzione (hero ↔ fixed a
+   100px di scroll). Cambia il comportamento da seduta:
+   - idle: respira e ondeggia sul perno ai piedi, niente
+     galleggiamento (si staccherebbe dal terminale);
+   - l'idle parte solo dopo l'atterraggio dell'intro
+     (initSissy.landed), per non litigare sulle stesse proprietà;
+   - clic / Invio sul bottone: saltello + comando nel terminale;
+   - il volo mira al centro di #sissy-fixed, misurato sulla
+     larghezza utile (clientWidth, senza scrollbar);
+   - al ritorno atterra sulla posizione attuale del bottone,
+     letta al momento, quindi niente scatto a fine animazione.
+   --------------------------------------------------------------- */
 function initSissy() {
+    initSissy.landed = () => {};
+
     const heroImg = document.getElementById('sissy-hero');
     const fixedImg = document.getElementById('sissy-fixed');
     if (!heroImg || !fixedImg) return;
 
-    const deco = document.querySelector('.hero-deco');
+    const btn = heroImg.closest('.sissy-btn');
 
     // Click-to-top works regardless of GSAP/ScrollTrigger availability.
     fixedImg.addEventListener('click', () => window.scrollTo({top: 0, behavior: 'smooth'}));
 
-    if (!HAS_GSAP) return;
+    if (!HAS_GSAP) {
+        if (btn) btn.addEventListener('click', () => heroTerminal().pet());
+        return;
+    }
     if (typeof ScrollTrigger !== 'undefined') gsap.registerPlugin(ScrollTrigger);
 
     const reduceMotion = REDUCE;
 
-    let heroFloatTween = null;
-    let heroWiggleTl = null;
+    let breatheTween = null;
+    let swayTl = null;
     let fixedFloatTween = null;
     let transitionTl = null;
+    let hopping = false;
     let state = 'hero'; // 'hero' | 'fixed' | 'to-fixed' | 'to-hero'
 
     function startHeroIdle() {
-        if (reduceMotion) return;
-        heroFloatTween = gsap.to(heroImg, {y: -10, duration: 2.5, ease: 'sine.inOut', yoyo: true, repeat: -1});
-        heroWiggleTl = gsap.timeline({repeat: -1, repeatDelay: 5})
+        if (reduceMotion || breatheTween) return;
+        breatheTween = gsap.to(heroImg, {
+            scaleY: 1.025, scaleX: 0.992, duration: 1.7, ease: 'sine.inOut', yoyo: true, repeat: -1,
+        });
+        swayTl = gsap.timeline({repeat: -1, repeatDelay: 5, delay: 2})
             .to(heroImg, {rotation: -3, duration: 0.3, ease: 'elastic.out'})
             .to(heroImg, {rotation: 3, duration: 0.3, ease: 'elastic.out'})
             .to(heroImg, {rotation: 0, duration: 0.3, ease: 'elastic.out'});
     }
 
     function stopHeroIdle() {
-        if (heroFloatTween) {
-            heroFloatTween.kill();
-            heroFloatTween = null;
+        if (breatheTween) {
+            breatheTween.kill();
+            breatheTween = null;
         }
-        if (heroWiggleTl) {
-            heroWiggleTl.kill();
-            heroWiggleTl = null;
+        if (swayTl) {
+            swayTl.kill();
+            swayTl = null;
         }
     }
 
@@ -982,25 +1131,53 @@ function initSissy() {
     }
 
     gsap.set(fixedImg, {opacity: 0, scale: 0});
-    startHeroIdle();
 
-    // #sissy-fixed sits at a fixed bottom:80px/right:16px (see CSS) — the fly-away
-    // target below is computed to match that exact box so the hand-off lands cleanly.
+    // Con l'intro animata l'idle aspetta l'atterraggio; senza (reduced
+    // motion, o pagina riaperta già scrollata) non c'è niente da aspettare.
+    initSissy.landed = () => {
+        if (state === 'hero' && !hopping) startHeroIdle();
+    };
+    if (reduceMotion) startHeroIdle();
+
+    function hop() {
+        if (state !== 'hero') return;
+        heroTerminal().pet();
+        if (reduceMotion || hopping) return;
+
+        hopping = true;
+        stopHeroIdle();
+        gsap.timeline({
+            onComplete: () => {
+                hopping = false;
+                if (state === 'hero') startHeroIdle();
+            },
+        })
+            .to(heroImg, {scaleX: 1.08, scaleY: 0.88, rotation: 0, duration: 0.1, ease: 'power2.out'})
+            .to(heroImg, {y: -26, scaleX: 0.96, scaleY: 1.06, duration: 0.24, ease: 'power2.out'})
+            .to(heroImg, {y: 0, scaleX: 1, scaleY: 1, duration: 0.2, ease: 'power2.in'})
+            .to(heroImg, {scaleX: 1.07, scaleY: 0.9, duration: 0.07, ease: 'power1.out'})
+            .to(heroImg, {scaleX: 1, scaleY: 1, duration: 0.5, ease: 'elastic.out(1, 0.45)'});
+    }
+
+    if (btn) btn.addEventListener('click', hop);
+
     function goToFixed() {
         if (state === 'fixed' || state === 'to-fixed') return;
         state = 'to-fixed';
+        hopping = false;
         stopHeroIdle();
         stopFixedIdle();
         if (transitionTl) transitionTl.kill();
-
-        // The orb/rings belong to the hero pose only — they fade with the take-off.
-        if (deco) gsap.to(deco, {opacity: 0, scale: 0.85, duration: 0.35, ease: 'power2.in'});
+        // Anche l'intro o un saltello ancora in corso: altrimenti continuerebbero
+        // a scrivere y/scale sopra al volo.
+        gsap.killTweensOf(heroImg);
 
         const rect = heroImg.getBoundingClientRect();
         gsap.set(heroImg, {
             position: 'fixed', top: rect.top, left: rect.left,
             width: rect.width, height: rect.height, margin: 0,
             x: 0, y: 0, rotation: 0, scale: 1, opacity: 1,
+            transformOrigin: '50% 50%',
         });
         gsap.set(fixedImg, {opacity: 0, scale: 0, pointerEvents: 'none'});
 
@@ -1010,8 +1187,9 @@ function initSissy() {
         const fixedCS = getComputedStyle(fixedImg);
         const fixedW = fixedImg.offsetWidth || 60;
         const fixedH = fixedImg.offsetHeight || 60;
-        const targetLeft = window.innerWidth - (parseFloat(fixedCS.right) || 0) - fixedW;
-        const targetTop = window.innerHeight - (parseFloat(fixedCS.bottom) || 0) - fixedH;
+        const viewW = document.documentElement.clientWidth || window.innerWidth;
+        const targetX = viewW - (parseFloat(fixedCS.right) || 0) - fixedW / 2;
+        const targetY = window.innerHeight - (parseFloat(fixedCS.bottom) || 0) - fixedH / 2;
 
         if (reduceMotion) {
             gsap.set(heroImg, {autoAlpha: 0});
@@ -1033,10 +1211,12 @@ function initSissy() {
             },
         });
         transitionTl
-            .to(heroImg, {y: -80, scale: 1.2, duration: 0.3, ease: 'power2.out'})
+            // Si raccoglie prima di saltare giù dal terminale.
+            .to(heroImg, {scaleX: 1.08, scaleY: 0.88, duration: 0.08, ease: 'power1.out'})
+            .to(heroImg, {y: -80, scaleX: 1.12, scaleY: 1.22, duration: 0.3, ease: 'power2.out'})
             .to(heroImg, {
-                x: targetLeft - rect.left,
-                y: targetTop - rect.top,
+                x: targetX - (rect.left + rect.width / 2),
+                y: targetY - (rect.top + rect.height / 2),
                 scale: 0,
                 duration: 0.5,
                 ease: 'power2.in',
@@ -1051,28 +1231,35 @@ function initSissy() {
         if (transitionTl) transitionTl.kill();
 
         gsap.set(fixedImg, {pointerEvents: 'none'});
-        if (deco) gsap.to(deco, {opacity: 1, scale: 1, duration: 0.5, ease: 'power2.out', delay: 0.25});
 
         if (reduceMotion) {
             gsap.set(fixedImg, {opacity: 0, scale: 0});
-            gsap.set(heroImg, {clearProps: 'position,top,left,width,height,margin,x,y,scale,rotation,opacity,visibility'});
+            gsap.set(heroImg, {clearProps: 'all'});
             state = 'hero';
             startHeroIdle();
             return;
         }
 
+        // Il bottone resta nel flusso anche quando lei vola: è la sua sedia.
+        // Letta al momento del rientro, non al decollo, perché nel frattempo
+        // la pagina ha scrollato.
+        const seat = () => (btn || heroImg).getBoundingClientRect();
+
         transitionTl = gsap.timeline({
             onComplete: () => {
-                gsap.set(heroImg, {clearProps: 'position,top,left,width,height,margin,x,y,scale,rotation,opacity,visibility'});
+                gsap.set(heroImg, {clearProps: 'all'});
                 state = 'hero';
                 startHeroIdle();
             },
         });
         transitionTl
             .to(fixedImg, {opacity: 0, scale: 0, duration: 0.3, ease: 'power2.in'})
-            .set(heroImg, {autoAlpha: 1})
+            .set(heroImg, {autoAlpha: 1, top: () => seat().top, left: () => seat().left})
             .to(heroImg, {x: 0, y: -80, scale: 1.2, duration: 0.5, ease: 'power2.out'})
-            .to(heroImg, {x: 0, y: 0, scale: 1, rotation: 0, duration: 0.3, ease: 'power2.out'});
+            .to(heroImg, {y: 0, scale: 1, rotation: 0, duration: 0.3, ease: 'power2.in'})
+            .set(heroImg, {transformOrigin: '50% 100%'})
+            .to(heroImg, {scaleX: 1.08, scaleY: 0.88, duration: 0.07, ease: 'power1.out'})
+            .to(heroImg, {scaleX: 1, scaleY: 1, duration: 0.45, ease: 'elastic.out(1, 0.45)'});
     }
 
     if (typeof ScrollTrigger !== 'undefined') {

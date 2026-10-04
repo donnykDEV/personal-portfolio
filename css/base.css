@@ -19,21 +19,44 @@
 }
 
 :root {
-    --bg: #0d0d0d;
-    --green: #39ff14;
-    --green-dim: #1a7a08;
-    --white: #e8e6e0;
-    --white-dim: #9e9b94;
+    /* Neutri appena caldi e un solo accento: l'ambra dei lampioni al sodio
+       (e dei vecchi monitor a fosfori). Contrasti sul --bg: testo 15.6:1,
+       testo attenuato 7.3:1, accento 10.1:1 (e altrettanto il --bg sull'accento,
+       nei bottoni pieni), accento attenuato 4.8:1 — non è solo un filetto:
+       home.css lo usa anche come colore di testo (numeri dei servizi, indici
+       della nav, contatori), quindi non va scurito. */
+    --bg: #0e0c0a;
+    --accent: #ffa839;
+    --accent-dim: #b26e27;
+    --white: #ece5db;
+    --white-dim: #a69d93;
+    /* Testo di servizio (barra del terminale, barra di stato, ticker, date
+       non ancora raggiunte): 5.6:1 sul --bg, sopra la soglia AA anche a 10-11px. */
+    --muted: #90887f;
     --font-display: 'Syne', sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
 
     /* premium layer */
-    --line: #1a1a1a;
-    --line-soft: #141414;
-    --surface: #101010;
-    --green-05: rgba(57, 255, 20, 0.05);
-    --green-10: rgba(57, 255, 20, 0.10);
-    --green-20: rgba(57, 255, 20, 0.20);
+    --line: #201c19;
+    --line-soft: #181512;
+    --surface: #13100e;
+    --accent-05: rgba(255, 168, 57, 0.05);
+    --accent-10: rgba(255, 168, 57, 0.10);
+    --accent-20: rgba(255, 168, 57, 0.20);
+    /* Gli stessi 255,168,57 per i punti dove serve un'opacità diversa
+       (rgba(var(--accent-rgb), .3)) e --accent-hi per il bianco caldo della
+       testa della timeline. --glow scala gli aloni: il neon ne viveva, la
+       luna no. */
+    --accent-rgb: 255, 168, 57;
+    --accent-hi: #ffedc8;
+    --glow: 0.6;
+    /* I cinque toni del retino del cielo (js/sky.js li legge da qui). Il primo
+       è il --bg: il cielo si fonde con la pagina. */
+    --sky-0: #0e0c0a;
+    --sky-1: #201b16;
+    --sky-2: #3a3129;
+    --sky-3: #675849;
+    --sky-4: #c99b65;
     --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -72,7 +95,7 @@ body {
 }
 
 a {
-    color: var(--green);
+    color: var(--accent);
     text-decoration: none;
 }
 
@@ -89,14 +112,14 @@ a:hover {
 }
 
 ::-webkit-scrollbar-thumb {
-    background: var(--green);
+    background: var(--accent);
 }
 
 /* SECTION LABEL */
 .section-label {
     font-family: var(--font-mono);
     font-size: 11px;
-    color: var(--green);
+    color: var(--accent);
     letter-spacing: 0.2em;
     text-transform: uppercase;
     margin-bottom: 30px;
@@ -110,7 +133,7 @@ a:hover {
     flex: 1;
     max-width: 80px;
     height: 1px;
-    background: var(--green-dim);
+    background: var(--accent-dim);
 }
 
 /* ---- SYMBOL GLYPHS (↗ ✉ ◈ ✦) ----
@@ -157,10 +180,8 @@ footer p {
     letter-spacing: 0.1em;
 }
 
-/* ---- AMBIENT BACKGROUND ---- */
-/* Il gruppo resta intero anche se le pagine legali montano il solo
-   .bg-glow--a: sono poche centinaia di byte e tenerlo spezzato in due file
-   renderebbe fragile qualsiasi ritocco allo sfondo. */
+/* ---- AMBIENT BACKGROUND ----
+   Solo le pagine legali: la home ha il cielo disegnato da js/sky.js. */
 .bg-fx {
     position: fixed;
     inset: 0;
@@ -178,8 +199,6 @@ footer p {
     background-size: 72px 72px;
     -webkit-mask-image: radial-gradient(ellipse 90% 70% at 50% 20%, #000 0%, transparent 78%);
     mask-image: radial-gradient(ellipse 90% 70% at 50% 20%, #000 0%, transparent 78%);
-    /* Parallax offset written by script.js as a scroll-linked custom property. */
-    transform: translate3d(0, calc(var(--bg-shift, 0) * 1px), 0);
 }
 
 .bg-glow {
@@ -196,19 +215,8 @@ footer p {
     height: 52vw;
     max-width: 720px;
     max-height: 720px;
-    background: radial-gradient(circle, rgba(57, 255, 20, 0.09), transparent 68%);
+    background: radial-gradient(circle, rgba(var(--accent-rgb), 0.09), transparent 68%);
     animation: drift-a 22s ease-in-out infinite;
-}
-
-.bg-glow--b {
-    bottom: -18vh;
-    left: -14vw;
-    width: 46vw;
-    height: 46vw;
-    max-width: 620px;
-    max-height: 620px;
-    background: radial-gradient(circle, rgba(57, 255, 20, 0.055), transparent 68%);
-    animation: drift-b 28s ease-in-out infinite;
 }
 
 @keyframes drift-a {
@@ -217,15 +225,6 @@ footer p {
     }
     50% {
         transform: translate(-5vw, 6vh) scale(1.12);
-    }
-}
-
-@keyframes drift-b {
-    0%, 100% {
-        transform: translate(0, 0) scale(1);
-    }
-    50% {
-        transform: translate(6vw, -5vh) scale(1.1);
     }
 }
 
@@ -242,11 +241,11 @@ footer p {
 
 .sl-num {
     color: var(--bg);
-    background: var(--green);
+    background: var(--accent);
     padding: 3px 7px;
     font-weight: 700;
     letter-spacing: 0.12em;
-    box-shadow: 0 0 16px rgba(57, 255, 20, 0.28);
+    box-shadow: 0 0 16px rgba(var(--accent-rgb), calc(0.28 * var(--glow)));
 }
 
 .sl-text {
@@ -258,7 +257,7 @@ footer p {
    section a hard top edge and makes the vertical rhythm read as deliberate. */
 .section-label::after {
     max-width: none;
-    background: linear-gradient(to right, var(--green-dim), rgba(26, 122, 8, 0.15) 55%, transparent);
+    background: linear-gradient(to right, var(--accent-dim), transparent);
 }
 
 /* ---- FOOTER: premium layer ---- */
@@ -316,7 +315,7 @@ footer p {
 }
 
 .footer-legal a:hover {
-    color: var(--green);
+    color: var(--accent);
 }
 
 .footer-legal span {
@@ -358,9 +357,5 @@ footer p {
 
     .bg-glow {
         animation: none !important;
-    }
-
-    .bg-grid {
-        transform: none !important;
     }
 }
